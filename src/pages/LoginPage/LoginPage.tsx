@@ -7,12 +7,7 @@ import { selectIsAuthenticated } from "../../store/selectors/authSelectors";
 import { setIsAuthenticated } from "../../store/slices/authSlice";
 
 export const LoginPage: FC = () => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<LoginParams>();
+  const { register, handleSubmit } = useForm<LoginParams>();
 
   const [trigger, { isSuccess }] = useLoginMutation();
   const navigate = useNavigate();

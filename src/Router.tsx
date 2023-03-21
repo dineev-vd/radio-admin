@@ -31,7 +31,7 @@ export const Router: FC = () => {
     <>
       {isAuthenticated !== undefined && (
         <Routes>
-          <Route path="/" element={<MainPage />} />
+          <Route path="/*" element={<MainPage />} />
           <Route path="/login" element={<LoginPage />} />
         </Routes>
       )}
