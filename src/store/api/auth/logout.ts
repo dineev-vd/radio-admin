@@ -1,4 +1,4 @@
-import radioApi from "..";
+import radioApi, { clearAccessToken } from "..";
 
 const logoutEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
@@ -7,6 +7,11 @@ const logoutEndpoint = radioApi.injectEndpoints({
         url: "logout",
         method: "POST",
       }),
+      onQueryStarted: async (_, { queryFulfilled }) => {
+        await queryFulfilled;
+
+        clearAccessToken();
+      },
     }),
   }),
   overrideExisting: false,

@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-const initialState: { isAuthenticated?: boolean } = {};
+const initialState: { isAuthenticated?: boolean; accessToken?: string } = {};
 
 export const authSlice = createSlice({
   name: "auth",

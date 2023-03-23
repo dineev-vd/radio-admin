@@ -1,7 +1,11 @@
 import radioApi from "..";
 
 export type User = {
-  username: string;
+  avatar: string;
+  email: string;
+  id: number;
+  name: string;
+  role: number;
 };
 
 const userEndpoint = radioApi.injectEndpoints({

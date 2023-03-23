@@ -7,9 +7,11 @@ import { selectIsAuthenticated } from "./store/selectors/authSelectors";
 import { setIsAuthenticated } from "./store/slices/authSlice";
 
 export const Router: FC = () => {
-  const { data, isSuccess, isLoading } = useGetUserQuery();
 
+  
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const { isSuccess, isLoading } = useGetUserQuery();
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -24,8 +26,6 @@ export const Router: FC = () => {
       dispatch(setIsAuthenticated(true));
     }
   }, [dispatch, isSuccess]);
-
-  console.log(data);
 
   return (
     <>

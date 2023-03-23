@@ -1,4 +1,4 @@
-import { FC, useEffect, useLayoutEffect } from "react";
+import { FC, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +17,7 @@ export const LoginPage: FC = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const dispatch = useDispatch();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate("/");
     }
@@ -26,7 +26,6 @@ export const LoginPage: FC = () => {
   useEffect(() => {
     if (isSuccess) {
       dispatch(setIsAuthenticated(true));
-      navigate(-1);
     }
   }, [dispatch, isSuccess, navigate]);
 

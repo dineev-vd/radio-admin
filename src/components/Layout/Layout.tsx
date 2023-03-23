@@ -4,6 +4,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/auth/logout";
 import { useGetUserQuery } from "../../store/api/user/getUser";
 import { setIsAuthenticated } from "../../store/slices/authSlice";
+import { ChannelsView } from "../../views/ChannelsView/ChannelsView";
 import { NewsView } from "../../views/NewsView/NewsView";
 import { TracksView } from "../../views/TracksView/TracksView";
 import styles from "./Layout.module.css";
@@ -38,7 +39,7 @@ const Layout: FC = () => {
             </div>
           </div>
           <div className={styles.sidebarFooter}>
-            <div>{data?.username}</div>
+            <div>{data?.name}</div>
             <button onClick={onLogout}>Выйти</button>
           </div>
         </div>
@@ -46,7 +47,7 @@ const Layout: FC = () => {
           <div>
             <Routes>
               <Route path={"tracks"} element={<TracksView />} />
-              <Route path={"channels"} element={"Каналы"} />
+              <Route path={"channels"} element={<ChannelsView />} />
               <Route path={"podcasts"} element={"Подкасты"} />
               <Route path={"news/*"} element={<NewsView />} />
               <Route path={"programs"} element={"Программы"} />

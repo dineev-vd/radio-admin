@@ -1,18 +1,21 @@
-import MarkdownEditor from "@uiw/react-markdown-editor";
-import { FC, useState } from "react";
+import { FC } from "react";
 import { Button, Stack, Table } from "react-bootstrap";
 import { Route, Routes, useNavigate } from "react-router-dom";
+import { useDeleteNewsPostMutation } from "../../store/api/news/deleteNewsPost";
+import { useGetNewsQuery } from "../../store/api/news/getNews";
+import NewNewsPostView from "./NewNewsPostView";
+import NewsPostView from "./NewsPostView";
 
 export const NewsView: FC = () => {
   const navigate = useNavigate();
-  const [state, setState] = useState("");
+
+  const { data } = useGetNewsQuery();
+  const [trigger] = useDeleteNewsPostMutation();
 
   return (
     <Routes>
-      <Route
-        path="new"
-        element={<MarkdownEditor value={state} onChange={setState} />}
-      />
+      <Route path=":id" element={<NewsPostView />} />
+      <Route path="new" element={<NewNewsPostView />} />
       <Route
         index
         element={
@@ -22,35 +25,37 @@ export const NewsView: FC = () => {
             <Stack gap={2}>
               <h2>Список новостей</h2>
               <Button onClick={() => navigate("new")}>Добавить новость</Button>
-              <Table striped>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Username</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>Mark</td>
-                    <td>Otto</td>
-                    <td>@mdo</td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>Jacob</td>
-                    <td>Thornton</td>
-                    <td>@fat</td>
-                  </tr>
-                  <tr>
-                    <td>3</td>
-                    <td colSpan={2}>Larry the Bird</td>
-                    <td>@twitter</td>
-                  </tr>
-                </tbody>
-              </Table>
+              {data && (
+                <Table striped>
+                  <thead>
+                    <tr>
+                      <th>id</th>
+                      <th>title</th>
+                      <th>publication_date</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.news.map((post) => (
+                      <tr key={post.id} onClick={() => navigate(post.id)}>
+                        <td>{post.id}</td>
+                        <td>{post.title}</td>
+                        <td>{post.date}</td>
+                        <td>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              trigger({ id: post.id });
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
             </Stack>
           </Stack>
         }
