@@ -7,7 +7,7 @@ export type NewNewsPost = {
 
 const createNewsPostEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
-    createNewsPost: build.mutation<void, NewNewsPost>({
+    createNewsPost: build.mutation<{ id: string }, NewNewsPost>({
       query: (data) => ({
         url: "news",
         method: "PUT",

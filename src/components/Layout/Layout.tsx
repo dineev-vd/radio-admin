@@ -46,12 +46,12 @@ const Layout: FC = () => {
         <div className={styles.content}>
           <div>
             <Routes>
-              <Route path={"tracks"} element={<TracksView />} />
-              <Route path={"channels"} element={<ChannelsView />} />
-              <Route path={"podcasts"} element={"Подкасты"} />
+              <Route path={"tracks/*"} element={<TracksView />} />
+              <Route path={"channels/*"} element={<ChannelsView />} />
+              <Route path={"podcasts/*"} element={"Подкасты"} />
               <Route path={"news/*"} element={<NewsView />} />
-              <Route path={"programs"} element={"Программы"} />
-              <Route path={"air"} element={"Эфир"} />
+              <Route path={"programs/*"} element={"Программы"} />
+              <Route path={"air/*"} element={"Эфир"} />
             </Routes>
           </div>
         </div>

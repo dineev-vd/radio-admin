@@ -1,16 +1,34 @@
 import radioApi from "..";
 
+// ID          int           `json:"id"`
+// 	Title       string        `json:"title"`
+// 	Perfomancer string        `json:"perfomancer"`
+// 	Year        int           `json:"year"`
+// 	Audio       string        `json:"audio"`
+// 	Duration    time.Duration `json:"duration"`
+
 export type Track = {
   id: string;
   title: string;
-  content: string;
-  publication_date: string;
+  performancer: string;
+  year: number;
+  audio: string;
+  duration: string;
+};
+
+export type TrackResponse = {
+  count: number;
+  tracks: Track[];
 };
 
 const tracksEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
-    getTracks: build.query<Track[], void>({
-      query: () => ({ url: "tracks", params: { offset: 0, limit: 10 } }),
+    getTracks: build.query<TrackResponse, void>({
+      query: () => ({ url: "track", params: { offset: 0, limit: 10 } }),
+      providesTags: (result) =>
+        result
+          ? result.tracks.map((track) => ({ id: track.id, type: "TRACKS" }))
+          : [],
     }),
   }),
   overrideExisting: false,

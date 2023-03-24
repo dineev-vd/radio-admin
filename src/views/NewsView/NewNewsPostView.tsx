@@ -7,14 +7,14 @@ import {
 } from "../../store/api/news/createNewsPost";
 
 const NewNewsPostView: FC = () => {
-  const [trigger, { isSuccess }] = useCreateNewsPostMutation();
+  const [trigger, { data }] = useCreateNewsPostMutation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isSuccess) {
-      navigate("../");
+    if (data) {
+      navigate(`../${data.id}`);
     }
-  }, [isSuccess, navigate]);
+  }, [data, navigate]);
 
   const onSubmit = (data: NewNewsPost) => {
     trigger(data);
@@ -23,7 +23,6 @@ const NewNewsPostView: FC = () => {
   return (
     <div>
       <h2>Создайте новость</h2>
-
       <NewsPostEditor onSubmit={onSubmit} />
     </div>
   );
