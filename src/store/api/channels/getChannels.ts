@@ -1,5 +1,10 @@
 import radioApi from "..";
 
+export type GetChennelsReponse = {
+  count: number;
+  channels: ShortChannelInfo[];
+};
+
 export type ShortChannelInfo = {
   id: string;
   title: string;
@@ -8,8 +13,8 @@ export type ShortChannelInfo = {
 
 const channelsEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
-    getChannels: build.query<ShortChannelInfo[], void>({
-      query: () => ({ url: "channels" }),
+    getChannels: build.query<GetChennelsReponse, void>({
+      query: () => ({ url: "channel" }),
     }),
   }),
   overrideExisting: false,

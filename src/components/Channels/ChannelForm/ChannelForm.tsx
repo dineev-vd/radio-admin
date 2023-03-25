@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Channel } from "../../store/api/channels/getChannel";
+import { Channel } from "../../../store/api/channels/getChannel";
 
 const ChannelForm: FC<Channel> = ({ description, id, logo, status, title }) => {
   return (

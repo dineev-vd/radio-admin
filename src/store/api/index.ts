@@ -66,7 +66,7 @@ const radioApi = createApi({
   reducerPath: "radioApi",
   baseQuery: customBaseQuery,
   endpoints: () => ({}),
-  tagTypes: ["NEWS", "TRACKS"],
+  tagTypes: ["NEWS", "TRACKS", "CHANNELS", "SCHEDULE"],
 });
 
 export default radioApi;

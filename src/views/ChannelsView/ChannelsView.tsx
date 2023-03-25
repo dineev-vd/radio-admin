@@ -1,6 +1,8 @@
 import { FC } from "react";
-import { Button, Stack, Table } from "react-bootstrap";
+import { Button, Stack } from "react-bootstrap";
 import { Route, Routes, useNavigate } from "react-router-dom";
+import EntriesTable from "../../components/EntriesTable/EntriesTable";
+import { useDeleteChannelMutation } from "../../store/api/channels/deleteChannel";
 import { useGetChannelsQuery } from "../../store/api/channels/getChannels";
 import ChannelInfoView from "./ChannelInfoView";
 import NewChannelView from "./NewChannelView";
@@ -8,10 +10,11 @@ import NewChannelView from "./NewChannelView";
 export const ChannelsView: FC = () => {
   const navigate = useNavigate();
   const { data } = useGetChannelsQuery();
+  const [trigger] = useDeleteChannelMutation();
 
   return (
     <Routes>
-      <Route path=":id" element={<ChannelInfoView />} />
+      <Route path=":id/*" element={<ChannelInfoView />} />
       <Route path="new" element={<NewChannelView />} />
       <Route
         index
@@ -23,23 +26,11 @@ export const ChannelsView: FC = () => {
               <h2>Список каналов</h2>
               <Button onClick={() => navigate("new")}>Добавить канал</Button>
               {data && (
-                <Table striped>
-                  <thead>
-                    <tr>
-                      <th>id</th>
-                      <th>title</th>
-                      <th>publication_date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((post) => (
-                      <tr>
-                        <td>{post.id}</td>
-                        <td>{post.title}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                <EntriesTable
+                  data={data.channels}
+                  onDelete={(id) => trigger({ id })}
+                  onEntryClick={(id) => navigate(id)}
+                />
               )}
             </Stack>
           </Stack>

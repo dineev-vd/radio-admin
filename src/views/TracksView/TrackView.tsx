@@ -11,8 +11,7 @@ const TrackViewContent: FC<{ id: string }> = ({ id }) => {
   const { data } = useGetTrackQuery({ id });
   const [isEditing, setIsEditing] = useState(false);
   const [trigger, { isSuccess }] = usePatchTrackMutation();
-  const [uploadTrigger, { isSuccess: isUploadSuccess }] =
-    useUploadTrackMutation();
+  const [uploadTrigger] = useUploadTrackMutation();
 
   useEffect(() => {
     if (isSuccess) {
