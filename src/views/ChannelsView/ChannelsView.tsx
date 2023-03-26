@@ -13,15 +13,13 @@ export const ChannelsView: FC = () => {
   const [trigger] = useDeleteChannelMutation();
 
   return (
-    <Routes>
-      <Route path=":id/*" element={<ChannelInfoView />} />
-      <Route path="new" element={<NewChannelView />} />
-      <Route
-        index
-        element={
-          <Stack gap={4}>
-            <h1>Каналы</h1>
-
+    <>
+      <Routes>
+        <Route path=":id/*" element={<ChannelInfoView />} />
+        <Route path="new" element={<NewChannelView />} />
+        <Route
+          index
+          element={
             <Stack gap={2}>
               <h2>Список каналов</h2>
               <Button onClick={() => navigate("new")}>Добавить канал</Button>
@@ -33,9 +31,9 @@ export const ChannelsView: FC = () => {
                 />
               )}
             </Stack>
-          </Stack>
-        }
-      />
-    </Routes>
+          }
+        />
+      </Routes>
+    </>
   );
 };

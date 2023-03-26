@@ -1,4 +1,6 @@
+import classNames from "classnames";
 import { FC, useEffect } from "react";
+import { Button, Stack } from "react-bootstrap";
 import { useDispatch } from "react-redux";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/auth/logout";
@@ -8,6 +10,24 @@ import { ChannelsView } from "../../views/ChannelsView/ChannelsView";
 import { NewsView } from "../../views/NewsView/NewsView";
 import { TracksView } from "../../views/TracksView/TracksView";
 import styles from "./Layout.module.css";
+
+const links: { path: string; title: string; element: JSX.Element }[] = [
+  {
+    path: "tracks",
+    title: "Треки",
+    element: <TracksView />,
+  },
+  {
+    path: "channels",
+    title: "Каналы",
+    element: <ChannelsView />,
+  },
+  {
+    path: "news",
+    title: "Новости",
+    element: <NewsView />,
+  },
+];
 
 const Layout: FC = () => {
   const dispatch = useDispatch();
@@ -27,31 +47,67 @@ const Layout: FC = () => {
   return (
     <div className={styles.layout}>
       <div className={styles.contentWrapper}>
-        <div className={styles.sidebar}>
+        <div
+          className={classNames(
+            "d-flex flex-column flex-shrink-0 p-3 text-white bg-dark",
+            styles.sidebar
+          )}
+        >
           <div className={styles.sidebarContent}>
-            <div className={styles.sidebarLinks}>
-              <NavLink to={"tracks"}>Треки</NavLink>
-              <NavLink to={"channels"}>Каналы</NavLink>
-              <NavLink to={"podcasts"}>Подкасты</NavLink>
-              <NavLink to={"news"}>Новости</NavLink>
-              <NavLink to={"programs"}>Программы</NavLink>
-              <NavLink to={"air"}>Эфир</NavLink>
-            </div>
+            <ul
+              className={classNames(
+                styles.sidebarLinks,
+                "nav nav-pills flex-column mb-auto"
+              )}
+            >
+              {links.map((link) => (
+                <NavLink
+                  className={({ isActive }) =>
+                    classNames("nav-link text-white", { active: isActive })
+                  }
+                  to={link.path}
+                >
+                  {link.title}
+                </NavLink>
+              ))}
+            </ul>
           </div>
-          <div className={styles.sidebarFooter}>
+          <hr></hr>
+          <div
+            className={
+              "d-flex flex-row justify-content-between align-items-center"
+            }
+          >
+            {data?.avatar && (
+              <img
+                style={{ width: 50, height: 50, borderRadius: "50%" }}
+                src={`http://localhost:8080/${data.avatar}`}
+                alt=""
+              ></img>
+            )}
             <div>{data?.name}</div>
-            <button onClick={onLogout}>Выйти</button>
+            <Button onClick={onLogout}>Выйти</Button>
           </div>
         </div>
-        <div className={styles.content}>
-          <Routes>
-            <Route path={"tracks/*"} element={<TracksView />} />
-            <Route path={"channels/*"} element={<ChannelsView />} />
-            <Route path={"podcasts/*"} element={"Подкасты"} />
-            <Route path={"news/*"} element={<NewsView />} />
-            <Route path={"programs/*"} element={"Программы"} />
-            <Route path={"air/*"} element={"Эфир"} />
-          </Routes>
+        <div className={classNames(styles.content, "p-4")}>
+          <Stack className="h-100" gap={3}>
+            <Routes>
+              {links.map(({ path, element, title }) => (
+                <>
+                  <Route
+                    path={`${path}/*`}
+                    element={
+                      <>
+                        <h1>{title}</h1>
+                        <hr></hr>
+                        {element}
+                      </>
+                    }
+                  />
+                </>
+              ))}
+            </Routes>
+          </Stack>
         </div>
       </div>
     </div>

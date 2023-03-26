@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from "react";
+import { Button, Stack } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import NewsPostDisplay from "../../components/News/NewsPost/NewsPost";
 import NewsPostEditor from "../../components/News/NewsPostEditor/NewsPostEditor";
@@ -17,11 +18,11 @@ const NewsPostViewContent: FC<{ id: string }> = ({ id }) => {
   }, [isSuccess]);
 
   return (
-    <div>
+    <Stack style={{ flex: "1 1", flexBasis: 0 }} gap={3}>
       {data &&
         (isEditing ? (
           <>
-            <button onClick={() => setIsEditing(false)}>Отменить</button>
+            <Button onClick={() => setIsEditing(false)}>Отменить</Button>
             <NewsPostEditor
               onSubmit={(change) => trigger({ id, change })}
               defaultValues={data}
@@ -29,11 +30,11 @@ const NewsPostViewContent: FC<{ id: string }> = ({ id }) => {
           </>
         ) : (
           <>
-            <button onClick={() => setIsEditing(true)}>Редактировать</button>
+            <Button onClick={() => setIsEditing(true)}>Редактировать</Button>
             <NewsPostDisplay {...data} />
           </>
         ))}
-    </div>
+    </Stack>
   );
 };
 

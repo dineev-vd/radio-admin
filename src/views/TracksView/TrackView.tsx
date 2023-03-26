@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from "react";
+import { Button } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import TrackDisplay from "../../components/Tracks/Track/TrackDisplay";
 import TrackEditor from "../../components/Tracks/TrackEditor/TrackEditor";
@@ -30,7 +31,7 @@ const TrackViewContent: FC<{ id: string }> = ({ id }) => {
       {data &&
         (isEditing ? (
           <>
-            <button onClick={() => setIsEditing(false)}>Отменить</button>
+            <Button onClick={() => setIsEditing(false)}>Отменить</Button>
             <TrackEditor
               defaultValues={data}
               onSubmit={(change) => trigger({ change, id })}
@@ -38,7 +39,7 @@ const TrackViewContent: FC<{ id: string }> = ({ id }) => {
           </>
         ) : (
           <>
-            <button onClick={() => setIsEditing(true)}>Редактировать</button>
+            <Button onClick={() => setIsEditing(true)}>Редактировать</Button>
             <TrackDisplay {...data} />
             <TrackUpload
               onSubmit={(formData) => uploadTrigger({ formData, id })}

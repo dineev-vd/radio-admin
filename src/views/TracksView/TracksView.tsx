@@ -19,19 +19,16 @@ export const TracksView: FC = () => {
       <Route
         index
         element={
-          <Stack gap={4}>
-            <h1>Треки</h1>
-            <Stack gap={2}>
-              <h2>Список треков</h2>
-              <Button onClick={() => navigate("new")}>Добавить трек</Button>
-              {data && (
-                <EntriesTable
-                  data={data.tracks}
-                  onDelete={(id) => deleteTrigger({ id })}
-                  onEntryClick={(id) => navigate(id)}
-                />
-              )}
-            </Stack>
+          <Stack gap={2}>
+            <h2>Список треков</h2>
+            <Button onClick={() => navigate("new")}>Добавить трек</Button>
+            {data && (
+              <EntriesTable
+                data={data.tracks}
+                onDelete={(id) => deleteTrigger({ id })}
+                onEntryClick={(id) => navigate(id)}
+              />
+            )}
           </Stack>
         }
       />

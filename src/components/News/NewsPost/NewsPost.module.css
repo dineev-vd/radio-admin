@@ -1,0 +1,5 @@
+.scroll {
+  overflow-y: scroll;
+  flex: 1 1;
+  flex-basis: 0;
+}

@@ -20,20 +20,16 @@ export const NewsView: FC = () => {
       <Route
         index
         element={
-          <Stack gap={4}>
-            <h1>Новости</h1>
-
-            <Stack gap={2}>
-              <h2>Список новостей</h2>
-              <Button onClick={() => navigate("new")}>Добавить новость</Button>
-              {data && (
-                <EntriesTable
-                  data={data.news}
-                  onDelete={(id) => trigger({ id })}
-                  onEntryClick={(id) => navigate(id)}
-                />
-              )}
-            </Stack>
+          <Stack gap={2}>
+            <h2>Список новостей</h2>
+            <Button onClick={() => navigate("new")}>Добавить новость</Button>
+            {data && (
+              <EntriesTable
+                data={data.news}
+                onDelete={(id) => trigger({ id })}
+                onEntryClick={(id) => navigate(id)}
+              />
+            )}
           </Stack>
         }
       />

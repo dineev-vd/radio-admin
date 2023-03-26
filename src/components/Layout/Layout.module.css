@@ -11,13 +11,10 @@
 }
 
 .sidebar {
-  width: 300px;
-  display: flex;
-  flex-direction: column;
+  width: 280px;
 }
 
 .sidebarContent {
-  background-color: lightblue;
   flex: 1 1 auto;
 }
 

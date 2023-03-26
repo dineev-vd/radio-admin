@@ -21,10 +21,16 @@ export type TrackResponse = {
   tracks: Track[];
 };
 
+export type TracksRequest = {
+  offset?: number;
+  limit?: number;
+  query?: string;
+};
+
 const tracksEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
-    getTracks: build.query<TrackResponse, void>({
-      query: () => ({ url: "track", params: { offset: 0, limit: 10 } }),
+    getTracks: build.query<TrackResponse, TracksRequest | void>({
+      query: (params) => (params ? { url: "track", params } : "track"),
       providesTags: (result) =>
         result
           ? result.tracks.map((track) => ({ id: track.id, type: "TRACKS" }))

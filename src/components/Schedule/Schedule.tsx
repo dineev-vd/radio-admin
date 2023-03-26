@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Container, Table } from "react-bootstrap";
+import { Table } from "react-bootstrap";
 import { ScheduleResponse } from "../../store/api/channels/getSchedule";
 import styles from "./Schedule.module.css";
 
@@ -26,7 +26,7 @@ type TrackCardProps = {
   duration: number;
   index: number;
   onMouseDown?: (e: RMouseEvent, index: number) => void;
-  onClick?: () => void;
+  onClick?: (e: RMouseEvent) => void;
   fake?: boolean;
 };
 
@@ -89,7 +89,9 @@ const TrackCard: FC<TrackCardProps> = ({
               boxShadow: "0 0 10px rgba(0,0,0,0.5)",
             }}
           >
-            {title}
+            <div className="p-2" style={{ position: "sticky", top: 0 }}>
+              {title}
+            </div>
           </div>
         );
       })}
@@ -99,14 +101,14 @@ const TrackCard: FC<TrackCardProps> = ({
 
 const Schedule: FC<{
   date: string;
-  data: ScheduleResponse;
+  data: ScheduleResponse["tracks"];
   onClick: (index: number) => void;
   onChange: (index: number, start: number, duration: number) => void;
 }> = ({ date, data, onClick, onChange }) => {
   const tracks = useMemo(() => {
-    return data.tracks.map((track) => ({
+    return data.map((track) => ({
       id: track.id,
-      title: track.id,
+      title: track.track.title,
       start: dayjs(track.startdate).unix() * 1000,
       duration: dayjs(track.enddate).diff(dayjs(track.startdate)),
     }));
@@ -297,10 +299,11 @@ const Schedule: FC<{
 
   return (
     <div className={styles.wrapper}>
-      <Container className={styles.container}>
+      <div className={styles.container}>
         <div className={styles.tableContainer}>
           <div style={{ position: "relative" }}>
             <div
+              onClick={() => onClick(-1)}
               className={styles.tracksOverlay}
               style={{
                 width: `calc(100% - ${overlayOffset.x}px)`,
@@ -345,18 +348,19 @@ const Schedule: FC<{
                   start={track.start}
                   title={track.title}
                   key={track.id}
-                  onClick={() => onClick(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick(index);
+                  }}
                 />
               ))}
             </div>
             <Table bordered striped>
               <thead>
-                <tr>
-                  <th className={styles.th} ref={headerRef}></th>
+                <tr className={styles.th}>
+                  <th ref={headerRef}></th>
                   {weekDays.map((date, index) => (
-                    <th className={styles.th} key={index}>
-                      {date.format("DD.MM.YYYY")}
-                    </th>
+                    <th key={index}>{date.format("DD.MM.YYYY")}</th>
                   ))}
                 </tr>
               </thead>
@@ -380,7 +384,7 @@ const Schedule: FC<{
             </Table>
           </div>
         </div>
-      </Container>
+      </div>
     </div>
   );
 };

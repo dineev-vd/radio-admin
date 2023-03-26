@@ -1,11 +1,28 @@
+import classNames from "classnames";
 import { FC, useEffect, useState } from "react";
-import { Stack } from "react-bootstrap";
-import { Link, Route, Routes, useParams } from "react-router-dom";
+import { Button, Stack } from "react-bootstrap";
+import { NavLink, Route, Routes, useParams } from "react-router-dom";
 import ChannelEditor from "../../components/Channels/ChannelEdit/ChannelEdit";
 import ChannelForm from "../../components/Channels/ChannelForm/ChannelForm";
 import { useGetChannelQuery } from "../../store/api/channels/getChannel";
 import { usePatchChannelMutation } from "../../store/api/channels/patchChannel";
 import ScheduleView from "./ScheduleView";
+import StatisticsView from "./StatisticsView";
+
+const links: { path: string; title: string }[] = [
+  {
+    path: ".",
+    title: "Описание",
+  },
+  {
+    path: "schedule",
+    title: "Расписание",
+  },
+  {
+    path: "statistics",
+    title: "Статистика",
+  },
+];
 
 const ChannelInfoContent: FC<{ id: string }> = ({ id }) => {
   const { data: channelInfo } = useGetChannelQuery(id);
@@ -20,8 +37,19 @@ const ChannelInfoContent: FC<{ id: string }> = ({ id }) => {
 
   return (
     <>
-      <Link to={"schedule"}>Расписание</Link>
-
+      <div className={"d-flex nav nav-pills"}>
+        {links.map(({ path, title }) => (
+          <NavLink
+            className={({ isActive }) =>
+              classNames("nav-link", { active: isActive })
+            }
+            to={path}
+            end
+          >
+            {title}
+          </NavLink>
+        ))}
+      </div>
       <Routes>
         <Route
           index
@@ -29,7 +57,7 @@ const ChannelInfoContent: FC<{ id: string }> = ({ id }) => {
             channelInfo &&
             (isEditing ? (
               <>
-                <button onClick={() => setIsEditing(false)}>Отменить</button>
+                <Button onClick={() => setIsEditing(false)}>Отменить</Button>
                 <ChannelEditor
                   onSubmit={(change) => trigger({ change, id })}
                   defaultValues={channelInfo}
@@ -37,9 +65,9 @@ const ChannelInfoContent: FC<{ id: string }> = ({ id }) => {
               </>
             ) : (
               <>
-                <button onClick={() => setIsEditing(true)}>
+                <Button onClick={() => setIsEditing(true)}>
                   Редактировать
-                </button>
+                </Button>
                 <ChannelForm {...channelInfo} />
               </>
             ))
@@ -54,6 +82,7 @@ const ChannelInfoContent: FC<{ id: string }> = ({ id }) => {
             </Stack>
           }
         />
+        <Route path={"statistics"} element={<StatisticsView id={id} />} />
       </Routes>
     </>
   );

@@ -1,0 +1,11 @@
+.form {
+  width: 22rem;
+}
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}

@@ -1,10 +1,11 @@
 import { FC } from "react";
-import { Table } from "react-bootstrap";
+import { Button, Col, Table } from "react-bootstrap";
+import styles from "./EntriesTable.module.css";
 
 type EntriesTableProps = {
   data: (Record<string, string | number> & { id: string | number })[];
-  onDelete: (id: string) => void;
-  onEntryClick: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onEntryClick?: (id: string) => void;
 };
 
 const EntriesTable: FC<EntriesTableProps> = ({
@@ -15,39 +16,45 @@ const EntriesTable: FC<EntriesTableProps> = ({
   return (
     <>
       {data.length && (
-        <Table striped>
-          <thead>
-            <tr>
-              {Object.keys(data[0])
-                .concat("")
-                .map((key, columnIndex) => (
-                  <th key={columnIndex}>{key}</th>
-                ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => (
-              <tr
-                onClick={() => onEntryClick(row.id.toString())}
-                key={rowIndex}
-              >
-                {Object.entries(row).map(([_, value], columnIndex) => (
-                  <td key={columnIndex}>{value}</td>
-                ))}
-                <td>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(row.id.toString());
-                    }}
+        <Col className={styles.scroll}>
+          <div>
+            <Table striped>
+              <thead>
+                <tr>
+                  {Object.keys(data[0]).map((key, columnIndex) => (
+                    <th key={columnIndex}>{key}</th>
+                  ))}
+                  {onDelete && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row, rowIndex) => (
+                  <tr
+                    onClick={() => onEntryClick?.(row.id.toString())}
+                    key={rowIndex}
                   >
-                    Удалить
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+                    {Object.entries(row).map(([_, value], columnIndex) => (
+                      <td key={columnIndex}>{value}</td>
+                    ))}
+                    {onDelete && (
+                      <td>
+                        <Button
+                          variant="outline-danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete?.(row.id.toString());
+                          }}
+                        >
+                          Удалить
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </Col>
       )}
     </>
   );
