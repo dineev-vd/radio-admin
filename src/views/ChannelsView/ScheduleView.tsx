@@ -1,4 +1,5 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
 import minMax from "dayjs/plugin/minMax";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
@@ -20,6 +21,27 @@ import { usePatchScheduleMutation } from "../../store/api/channels/patchSchedule
 dayjs.extend(weekday);
 dayjs.extend(utc);
 dayjs.extend(minMax);
+dayjs.extend(isBetween);
+
+function shuffle<T>(array: T[]) {
+  let currentIndex = array.length,
+    randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex !== 0) {
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+  }
+
+  return array;
+}
 
 export type NewScheduleTrack = Omit<ScheduleTrack, "id">;
 
@@ -95,15 +117,23 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
   }, [data, newTracks]);
 
   const addNewTrack = useCallback(() => {
+    const selected =
+      selectedIndex &&
+      (selectedIndex.type === "new"
+        ? newTracks[selectedIndex.id]
+        : oldTracks && oldTracks[selectedIndex.id]);
+
+    const insertDate = selected ? dayjs(selected?.enddate) : lastEnd;
+
     const newTrack: Partial<ScheduleTrack> = {
-      startdate: (lastEnd ?? dayjs()).format(),
-      enddate: (lastEnd ?? dayjs()).add(10, "minutes").format(),
+      startdate: insertDate.format(),
+      enddate: insertDate.add(10, "minutes").format(),
     };
 
     const uuid = uuidv4();
     setNewTracks((prev) => ({ ...prev, [uuid]: newTrack }));
     setSelectedIndex({ type: "new", id: uuid });
-  }, [lastEnd]);
+  }, [lastEnd, newTracks, oldTracks, selectedIndex]);
 
   const pushChanges = () => {
     if (Object.keys(newTracks).length) {
@@ -146,6 +176,109 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
     }
   };
 
+  const handleCopyFromDay = (from: Dayjs, to: Dayjs) => {
+    const startOfDay = from.hour(0).minute(0).second(0);
+    const endOfDay = startOfDay.add(1, "day");
+
+    const oldEntries = Object.entries(oldTracks ?? {}).filter(([id, track]) =>
+      dayjs(track.startdate).isBetween(startOfDay, endOfDay)
+    );
+
+    const newEntries = Object.entries(newTracks).filter(([id, track]) =>
+      dayjs(track.startdate).isBetween(startOfDay, endOfDay)
+    );
+
+    const startOfEntries = newEntries
+      .concat(oldEntries)
+      .reduce(
+        (prev, [id, track]) =>
+          dayjs(track.startdate).isBefore(prev) ? dayjs(track.startdate) : prev,
+        endOfDay
+      );
+
+    const typedEntries = newEntries
+      .map(
+        ([id, track]) => [id, { type: "new" as "new" | "old", track }] as const
+      )
+      .concat(
+        oldEntries.map(([id, track]) => [id, { type: "old", track }] as const)
+      )
+      .sort(([id, track], [otheId, otherTrack]) =>
+        dayjs(track.track.startdate).diff(dayjs(otherTrack.track.startdate))
+      );
+
+    let start = startOfEntries.year(to.year()).month(to.month()).day(to.day());
+    let finalNewTracks: typeof newTracks = {};
+    let finalChanges: typeof changes = {};
+
+    typedEntries.forEach(([id, { type, track }]) => {
+      if (track.track?.duration) {
+        finalNewTracks[uuidv4()] = {
+          startdate: start.format(),
+          enddate: start
+            .add(+track.track?.duration / 1000000000, "seconds")
+            .format(),
+          track: track.track,
+        };
+
+        start = start.add(+track.track?.duration / 1000000000, "seconds");
+      }
+    });
+
+    setChanges((prev) => ({ ...prev, ...finalChanges }));
+    setNewTracks((prev) => ({ ...prev, ...finalNewTracks }));
+  };
+
+  const handleReshuffle = (date: Dayjs) => {
+    const startOfDay = date.hour(0).minute(0).second(0);
+    const endOfDay = startOfDay.add(1, "day");
+
+    const oldEntries = Object.entries(oldTracks ?? {}).filter(([id, track]) =>
+      dayjs(track.startdate).isBetween(startOfDay, endOfDay)
+    );
+
+    const newEntries = Object.entries(newTracks).filter(([id, track]) =>
+      dayjs(track.startdate).isBetween(startOfDay, endOfDay)
+    );
+
+    const startOfEntries = newEntries
+      .concat(oldEntries)
+      .reduce(
+        (prev, [id, track]) =>
+          dayjs(track.startdate).isBefore(prev) ? dayjs(track.startdate) : prev,
+        endOfDay
+      );
+
+    const typedEntries = newEntries
+      .map(
+        ([id, track]) => [id, { type: "new" as "new" | "old", track }] as const
+      )
+      .concat(
+        oldEntries.map(([id, track]) => [id, { type: "old", track }] as const)
+      );
+
+    let start = startOfEntries;
+    let finalNewTracks: typeof newTracks = {};
+    let finalChanges: typeof changes = {};
+
+    shuffle(typedEntries).forEach(([id, { type, track }]) => {
+      if (track.track?.duration) {
+        (type === "new" ? finalNewTracks : finalChanges)[id] = {
+          startdate: start.format(),
+          enddate: start
+            .add(+track.track?.duration / 1000000000, "seconds")
+            .format(),
+          track: track.track,
+        };
+
+        start = start.add(+track.track?.duration / 1000000000, "seconds");
+      }
+    });
+
+    setChanges((prev) => ({ ...prev, ...finalChanges }));
+    setNewTracks((prev) => ({ ...prev, ...finalNewTracks }));
+  };
+
   return (
     <Stack gap={3}>
       <Button
@@ -165,6 +298,8 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
       >
         {oldTracks && (
           <Schedule
+            onDayCopy={handleCopyFromDay}
+            onReshuffle={handleReshuffle}
             selectedRange={selectedRange}
             data={{ new: newTracks, old: oldTracks }}
             onClick={setSelectedIndex}

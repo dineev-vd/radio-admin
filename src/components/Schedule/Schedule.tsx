@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Form, Table } from "react-bootstrap";
+import { Button, Form, OverlayTrigger, Popover, Table } from "react-bootstrap";
 import { ScheduleTrack } from "../../store/api/channels/getSchedule";
 import { SelectedSchedule } from "../../views/ChannelsView/ScheduleView";
 import { DateRange } from "../DateRangeSelect/DateRangeSelect";
@@ -23,7 +23,7 @@ dayjs.extend(weekday);
 dayjs.extend(duration);
 
 const DIVIDER_RANGE = [2, 3, 6, 12, 20, 30, 60];
-const SNAP_RANGE_MILLISECONDS = 0.5 * 60 * 1000;
+// const snapRangeMilliseconds = 0.5 * 60 * 1000;
 
 type ScheduleCollection = Record<string, Partial<ScheduleTrack>>;
 
@@ -40,6 +40,8 @@ type ScheduleProps = {
     type: keyof ScheduleProps["data"];
     change: Partial<ScheduleTrack>;
   }) => void;
+  onReshuffle: (date: Dayjs) => void;
+  onDayCopy: (from: Dayjs, to: Dayjs) => void;
 };
 
 type SnapDict = {
@@ -52,19 +54,15 @@ const Schedule: FC<ScheduleProps> = ({
   data,
   onClick,
   onChange,
+  onReshuffle,
+  onDayCopy,
 }) => {
   const [dividerIndex, setDividerIndex] = useState(3);
   const divider = useMemo(() => DIVIDER_RANGE[dividerIndex], [dividerIndex]);
-
-  // const tracks = useMemo(() => {
-  //   return data.map(({ type, scheduleTrack: track }) => ({
-  //     type,
-  //     id: track.id,
-  //     title: track.track?.title,
-  //     start: dayjs(track.startdate).unix() * 1000,
-  //     duration: dayjs(track.enddate).diff(dayjs(track.startdate)),
-  //   }));
-  // }, [data]);
+  const snapRangeMilliseconds = useMemo(
+    () => (60 / divider) * 60 * 1000 * 0.2,
+    [divider]
+  );
 
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -77,19 +75,6 @@ const Schedule: FC<ScheduleProps> = ({
       .fill(1)
       .map((_, index) => selectedRange.from.add(index, "day"));
   }, [selectedRange.from, selectedRange.to]);
-
-  // const processedTracks = useMemo(() => {
-  //   return tracks.map((track) => {
-  //     return {
-  //       weekDay: dayjs(track.start).locale(ru).weekday(),
-  //       startSeconds:
-  //         dayjs(track.start).hour() * 60 * 60 +
-  //         dayjs(track.start).minute() * 60 +
-  //         dayjs(track.start).second(),
-  //       ...track,
-  //     };
-  //   });
-  // }, [tracks]);
 
   const snapsRef = useRef<SnapDict>({ start: [], end: [] });
 
@@ -165,13 +150,13 @@ const Schedule: FC<ScheduleProps> = ({
             (v) =>
               Math.abs(
                 dayjs(newStart).add(fakeDayDeltaRef.current, "days").diff(v)
-              ) < SNAP_RANGE_MILLISECONDS
+              ) < snapRangeMilliseconds
           );
           const snapEnd = snapsRef.current.start.find(
             (v) =>
               Math.abs(
                 dayjs(newEnd).add(fakeDayDeltaRef.current, "days").diff(v)
-              ) < SNAP_RANGE_MILLISECONDS
+              ) < snapRangeMilliseconds
           );
 
           if (snapStart) {
@@ -186,28 +171,14 @@ const Schedule: FC<ScheduleProps> = ({
           setFakeStart(newStart);
           fakeStartRef.current = newStart;
         }
-
-        // setDragPosition({ y });
-        // dragPositionRef.current = y;
       }
     },
-    [data]
+    [data, snapRangeMilliseconds]
   );
 
   const handleMouseUp = useCallback(() => {
     if (overlayRef.current) {
       setDragId(undefined);
-
-      // const date = weekDays[dragDayRef.current]
-      //   .hour(0)
-      //   .minute(0)
-      //   .second(0)
-      //   .second(
-      //     (dragPositionRef.current / overlayRef.current.clientHeight) *
-      //       24 *
-      //       60 *
-      //       60
-      //   );
 
       if (dragIndexRef.current) {
         const originalDuration = dayjs(
@@ -235,18 +206,6 @@ const Schedule: FC<ScheduleProps> = ({
           },
         });
       }
-
-      // setTracks((prev) => {
-      //   const newTracks = [...prev];
-      //   const draggedTrack = prev[dragIndexRef.current];
-
-      //   newTracks.splice(dragIndexRef.current, 1, {
-      //     ...draggedTrack,
-      //     start: date.unix() * 1000,
-      //   });
-
-      //   return newTracks;
-      // });
     }
   }, [data, onChange]);
 
@@ -307,11 +266,14 @@ const Schedule: FC<ScheduleProps> = ({
 
   return (
     <div className={styles.wrapper}>
-      <Form.Range
-        value={dividerIndex}
-        max={DIVIDER_RANGE.length - 1}
-        onChange={(e) => setDividerIndex(+e.target.value)}
-      />
+      <Form.Group>
+        <Form.Label>Масштаб</Form.Label>
+        <Form.Range
+          value={dividerIndex}
+          max={DIVIDER_RANGE.length - 1}
+          onChange={(e) => setDividerIndex(+e.target.value)}
+        />
+      </Form.Group>
       <div className={styles.container}>
         <div className={styles.tableContainer}>
           <div style={{ position: "relative" }}>
@@ -339,21 +301,6 @@ const Schedule: FC<ScheduleProps> = ({
                   variant={dragIndex.type}
                   fake
                 />
-                // <div
-                //   className={styles.trackCardFake}
-                //   style={{
-                //     width: `calc(100% / 7)`,
-                //     transform: `translateX(calc(100% * ${dragDay}))`,
-                //     height: `calc(100% * ${
-                //       processedTracks[dragIndex].duration /
-                //       1000 /
-                //       (24 * 60 * 60)
-                //     })`,
-                //     top: `calc(${dragPosition.y}px)`,
-                //   }}
-                // >
-                //   {processedTracks[dragIndex].title}
-                // </div>
               )}
               {Object.entries(data.old).map(([id, track]) => (
                 <TrackCard
@@ -389,7 +336,15 @@ const Schedule: FC<ScheduleProps> = ({
                 <tr className={styles.th}>
                   <th ref={headerRef}></th>
                   {weekDays.map((date, index) => (
-                    <th key={index}>{date.format("DD.MM.YYYY")}</th>
+                    <th key={index}>
+                      <button onClick={() => onReshuffle(date)}>
+                        Перемешать
+                      </button>
+                      <CopyFromDayPopover
+                        copy={(from) => onDayCopy(from, date)}
+                      />
+                      {date.format("DD.MM.YYYY")}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -415,6 +370,44 @@ const Schedule: FC<ScheduleProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+const CopyFromDayPopover: FC<{ copy: (from: Dayjs) => void }> = ({ copy }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [date, setDate] = useState(dayjs());
+
+  return (
+    <OverlayTrigger
+      trigger="click"
+      placement="top"
+      show={isOpen}
+      rootClose
+      overlay={
+        <Popover>
+          <Popover.Header>Выберите дату</Popover.Header>
+          <Popover.Body>
+            <Form.Control
+              type="date"
+              value={date.format("YYYY-MM-DD")}
+              onChange={(e) => setDate(dayjs(e.target.value))}
+            />
+            <Button
+              onClick={() => {
+                copy(date);
+                setIsOpen(false);
+              }}
+            >
+              Скопировать
+            </Button>
+          </Popover.Body>
+        </Popover>
+      }
+    >
+      <Button variant="success" onClick={() => setIsOpen((p) => !p)}>
+        Скопировать из дня
+      </Button>
+    </OverlayTrigger>
   );
 };
 
