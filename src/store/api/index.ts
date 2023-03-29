@@ -11,7 +11,9 @@ import {
 } from "@reduxjs/toolkit/query/react";
 import { setIsAuthenticated } from "../slices/authSlice";
 
-const API_URL = "http://localhost:8080";
+export const API_URL = "http://51.250.73.253:8080";
+
+// const API_URL = "http://localhost:8080";
 const baseQuery = fetchBaseQuery({ baseUrl: API_URL });
 
 export const getAccessToken = () => localStorage.getItem("accessToken");

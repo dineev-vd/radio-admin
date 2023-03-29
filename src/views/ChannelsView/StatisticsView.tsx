@@ -13,15 +13,15 @@ import { useGetChannelListenersQuery } from "../../store/api/channels/getChannel
 
 const StatisticsView: FC<{ id: string }> = ({ id }) => {
   const [from, setFrom] = useState(
-    dayjs().subtract(7, "day").format("YYYY-MM-DD")
+    dayjs().subtract(7, "day").format("YYYY-MM-DDThh:mm")
   );
   console.log(id);
 
-  const [to, setTo] = useState(dayjs().format("YYYY-MM-DD"));
+  const [to, setTo] = useState(dayjs().format("YYYY-MM-DDThh:mm"));
   const { data } = useGetChannelListenersQuery({
     id,
-    from: dayjs(from, "yyyy-MM-dd").format(),
-    to: dayjs(to, "yyyy-MM-dd").format(),
+    from: dayjs(from, "yyyy-MM-ddThh:mm").format(),
+    to: dayjs(to, "yyyy-MM-ddThh:mm").format(),
   });
 
   return (
@@ -35,7 +35,7 @@ const StatisticsView: FC<{ id: string }> = ({ id }) => {
                 <Form.Control
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  type="date"
+                  type="datetime-local"
                 />
               </Form.Group>
               <Form.Group>
@@ -43,7 +43,7 @@ const StatisticsView: FC<{ id: string }> = ({ id }) => {
                 <Form.Control
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
-                  type="date"
+                  type="datetime-local"
                 />
               </Form.Group>
             </Stack>

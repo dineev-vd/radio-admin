@@ -1,5 +1,5 @@
-import dayjs from "dayjs";
-import ru from "dayjs/locale/ru";
+import dayjs, { Dayjs } from "dayjs";
+import duration from "dayjs/plugin/duration";
 import relativeTime from "dayjs/plugin/relativeTime";
 import weekday from "dayjs/plugin/weekday";
 import {
@@ -12,130 +12,83 @@ import {
   useState,
 } from "react";
 import { Table } from "react-bootstrap";
-import { ScheduleResponse } from "../../store/api/channels/getSchedule";
+import { ScheduleTrack } from "../../store/api/channels/getSchedule";
+import { SelectedSchedule } from "../../views/ChannelsView/ScheduleView";
+import { DateRange } from "../DateRangeSelect/DateRangeSelect";
 import styles from "./Schedule.module.css";
+import TrackCard from "./TrackCard/TrackCard";
 
 dayjs.extend(relativeTime);
 dayjs.extend(weekday);
+dayjs.extend(duration);
 
 const DIVIDER = 6;
+const SNAP_RANGE_MILLISECONDS = 5 * 60 * 1000;
 
-type TrackCardProps = {
-  title: string;
-  start: number;
-  duration: number;
-  index: number;
-  onMouseDown?: (e: RMouseEvent, index: number) => void;
-  onClick?: (e: RMouseEvent) => void;
-  fake?: boolean;
+type ScheduleCollection = Record<string, Partial<ScheduleTrack>>;
+
+type ScheduleProps = {
+  selectedRange: DateRange;
+  data: {
+    new: ScheduleCollection;
+    old: ScheduleCollection;
+  };
+
+  onClick: (params: SelectedSchedule) => void;
+  onChange: (params: {
+    id: string;
+    type: keyof ScheduleProps["data"];
+    change: Partial<ScheduleTrack>;
+  }) => void;
 };
 
-const TrackCard: FC<TrackCardProps> = ({
-  duration,
-  index,
-  start,
-  title,
-  onMouseDown,
+type SnapDict = {
+  start: Dayjs[];
+  end: Dayjs[];
+};
+
+const Schedule: FC<ScheduleProps> = ({
+  selectedRange,
+  data,
   onClick,
-  fake = false,
+  onChange,
 }) => {
-  const array = useMemo(() => {
-    let curArray = [start];
-
-    const end = dayjs(duration + start);
-
-    let endOfDay = dayjs(start).second(0).minute(0).hour(0).add(1, "day");
-
-    while (end.diff(endOfDay) > 0) {
-      // уходим в конец дня
-      curArray.push(endOfDay.unix() * 1000);
-      endOfDay = endOfDay.add(1, "day");
-    }
-
-    curArray.push(start + duration);
-
-    let finalArray: { startSeconds: number; duration: number }[] = [];
-    for (let i = 0; i < curArray.length - 1; i++) {
-      finalArray.push({
-        startSeconds:
-          dayjs(curArray[i]).hour() * 3600 +
-          dayjs(curArray[i]).minute() * 60 +
-          dayjs(curArray[i]).second(),
-        duration: curArray[i + 1] - curArray[i],
-      });
-    }
-
-    return finalArray;
-  }, [duration, start]);
-
-  return (
-    <>
-      {array.map(({ duration, startSeconds }, dayAddition) => {
-        return (
-          <div
-            onClick={onClick}
-            key={dayAddition}
-            className={styles.trackCard}
-            onMouseDown={(e) => onMouseDown?.(e, index)}
-            style={{
-              width: `calc(100% / 7)`,
-              transform: `translateX(calc(100% * ${
-                dayjs(start).locale(ru).weekday() + dayAddition
-              }))`,
-              height: `calc(100% * ${duration / 1000 / (24 * 60 * 60)})`,
-              top: `calc(100% * ${startSeconds / (24 * 60 * 60)})`,
-              opacity: fake ? 0.5 : 1,
-              zIndex: fake ? 2 : 1,
-              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-            }}
-          >
-            <div className="p-2" style={{ position: "sticky", top: 0 }}>
-              {title}
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-};
-
-const Schedule: FC<{
-  date: string;
-  data: ScheduleResponse["tracks"];
-  onClick: (index: number) => void;
-  onChange: (index: number, start: number, duration: number) => void;
-}> = ({ date, data, onClick, onChange }) => {
-  const tracks = useMemo(() => {
-    return data.map((track) => ({
-      id: track.id,
-      title: track.track.title,
-      start: dayjs(track.startdate).unix() * 1000,
-      duration: dayjs(track.enddate).diff(dayjs(track.startdate)),
-    }));
-  }, [data]);
+  // const tracks = useMemo(() => {
+  //   return data.map(({ type, scheduleTrack: track }) => ({
+  //     type,
+  //     id: track.id,
+  //     title: track.track?.title,
+  //     start: dayjs(track.startdate).unix() * 1000,
+  //     duration: dayjs(track.enddate).diff(dayjs(track.startdate)),
+  //   }));
+  // }, [data]);
 
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const weekDays = useMemo(() => {
-    const curDate = dayjs(date).locale(ru);
+    const duration = dayjs
+      .duration(selectedRange.to.diff(selectedRange.from))
+      .asDays();
 
-    return Array(7)
+    return Array(duration)
       .fill(1)
-      .map((_, index) => curDate.weekday(index));
-  }, [date]);
+      .map((_, index) => selectedRange.from.add(index, "day"));
+  }, [selectedRange.from, selectedRange.to]);
 
-  const processedTracks = useMemo(() => {
-    return tracks.map((track) => {
-      return {
-        weekDay: dayjs(track.start).locale(ru).weekday(),
-        startSeconds:
-          dayjs(track.start).hour() * 60 * 60 +
-          dayjs(track.start).minute() * 60 +
-          dayjs(track.start).second(),
-        ...track,
-      };
-    });
-  }, [tracks]);
+  // const processedTracks = useMemo(() => {
+  //   return tracks.map((track) => {
+  //     return {
+  //       weekDay: dayjs(track.start).locale(ru).weekday(),
+  //       startSeconds:
+  //         dayjs(track.start).hour() * 60 * 60 +
+  //         dayjs(track.start).minute() * 60 +
+  //         dayjs(track.start).second(),
+  //       ...track,
+  //     };
+  //   });
+  // }, [tracks]);
+
+  const snapsRef = useRef<SnapDict>({ start: [], end: [] });
 
   const headerRef = useRef<HTMLTableCellElement>(null);
   const [overlayOffset, setOverlayOffset] = useState<{ x: number; y: number }>({
@@ -160,10 +113,11 @@ const Schedule: FC<{
     }
   }, []);
 
+  const [shouldDisplayFake, setShouldDisplayFake] = useState(false);
   const startOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const [dragIndex, setDragIndex] = useState<number>(-1);
-  const dragIndexRef = useRef<number>(-1);
+  const [dragIndex, setDragId] = useState<SelectedSchedule>();
+  const dragIndexRef = useRef<SelectedSchedule>();
 
   const [fakeStart, setFakeStart] = useState<number>(0);
   const fakeStartRef = useRef<number>(0);
@@ -173,16 +127,13 @@ const Schedule: FC<{
 
   const startDayRef = useRef<number>(0);
 
-  const dragPositionRef = useRef<number>(0);
-
   const startPositionRef = useRef<number>(0);
-
-  const [dragDay, setDragDay] = useState<number>(0);
-  const dragDayRef = useRef<number>(0);
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (overlayRef.current) {
+        setDragId(dragIndexRef.current);
+
         const rect = overlayRef.current.getBoundingClientRect();
 
         const dragDay = Math.min(
@@ -206,22 +157,48 @@ const Schedule: FC<{
           60 *
           60 *
           1000;
-        const newStart =
-          processedTracks[dragIndexRef.current].start + newStartDelta;
 
-        setFakeStart(newStart);
-        fakeStartRef.current = newStart;
+        if (dragIndexRef.current) {
+          const curTrack =
+            data[dragIndexRef.current?.type][dragIndexRef.current?.id];
+
+          let newStart =
+            dayjs(curTrack.startdate).unix() * 1000 + newStartDelta;
+          const newEnd = dayjs(curTrack.enddate).unix() * 1000 + newStartDelta;
+
+          const snapStart = snapsRef.current.end.find(
+            (v) =>
+              Math.abs(
+                dayjs(newStart).add(fakeDayDeltaRef.current, "days").diff(v)
+              ) < SNAP_RANGE_MILLISECONDS
+          );
+          const snapEnd = snapsRef.current.start.find(
+            (v) =>
+              Math.abs(
+                dayjs(newEnd).add(fakeDayDeltaRef.current, "days").diff(v)
+              ) < SNAP_RANGE_MILLISECONDS
+          );
+
+          if (snapStart) {
+            newStart = snapStart.unix() * 1000 - (newEnd - newStart);
+          } else if (snapEnd) {
+            newStart = snapEnd.unix() * 1000;
+          }
+
+          setFakeStart(newStart);
+          fakeStartRef.current = newStart;
+        }
 
         // setDragPosition({ y });
         // dragPositionRef.current = y;
       }
     },
-    [processedTracks]
+    [data]
   );
 
   const handleMouseUp = useCallback(() => {
     if (overlayRef.current) {
-      setDragIndex(-1);
+      setDragId(undefined);
 
       // const date = weekDays[dragDayRef.current]
       //   .hour(0)
@@ -234,12 +211,32 @@ const Schedule: FC<{
       //       60
       //   );
 
-      onChange(
-        dragIndexRef.current,
-        dayjs(fakeStartRef.current).add(fakeDayDeltaRef.current, "day").unix() *
-          1000,
-        processedTracks[dragIndexRef.current].duration
-      );
+      if (dragIndexRef.current) {
+        const originalDuration = dayjs(
+          data[dragIndexRef.current.type][dragIndexRef.current.id].enddate
+        ).diff(
+          dayjs(
+            data[dragIndexRef.current.type][dragIndexRef.current.id].startdate
+          )
+        );
+
+        onChange({
+          id: dragIndexRef.current.id,
+          type: dragIndexRef.current.type,
+          change: {
+            startdate: dayjs(fakeStartRef.current)
+              .add(fakeDayDeltaRef.current, "day")
+              .format(),
+            enddate: dayjs(
+              dayjs(fakeStartRef.current)
+                .add(fakeDayDeltaRef.current, "day")
+                .unix() *
+                1000 +
+                originalDuration
+            ).format(),
+          },
+        });
+      }
 
       // setTracks((prev) => {
       //   const newTracks = [...prev];
@@ -253,10 +250,10 @@ const Schedule: FC<{
       //   return newTracks;
       // });
     }
-  }, [onChange, processedTracks]);
+  }, [data, onChange]);
 
   const onMouseDown = useCallback(
-    (e: RMouseEvent, index: number) => {
+    (e: RMouseEvent, selectedTrack: SelectedSchedule) => {
       const onMouseMove = () => {
         document.removeEventListener("mouseup", reset);
         document.removeEventListener("mousemove", onMouseMove);
@@ -265,8 +262,21 @@ const Schedule: FC<{
           x: e.nativeEvent.offsetX,
           y: e.nativeEvent.offsetY,
         };
-        setDragIndex(index);
-        dragIndexRef.current = index;
+
+        snapsRef.current = {
+          start: Object.values(data.old)
+            .map((value) => dayjs(value.startdate))
+            .concat(
+              Object.values(data.new).map((value) => dayjs(value.startdate))
+            ),
+          end: Object.values(data.old)
+            .map((value) => dayjs(value.enddate))
+            .concat(
+              Object.values(data.new).map((value) => dayjs(value.enddate))
+            ),
+        };
+
+        dragIndexRef.current = selectedTrack;
         startPositionRef.current = e.nativeEvent.y;
 
         if (overlayRef.current) {
@@ -294,8 +304,10 @@ const Schedule: FC<{
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", reset);
     },
-    [handleMouseMove, handleMouseUp]
+    [data.new, data.old, handleMouseMove, handleMouseUp]
   );
+
+  console.log(snapsRef.current);
 
   return (
     <div className={styles.wrapper}>
@@ -303,7 +315,7 @@ const Schedule: FC<{
         <div className={styles.tableContainer}>
           <div style={{ position: "relative" }}>
             <div
-              onClick={() => onClick(-1)}
+              onClick={() => onClick(undefined)}
               className={styles.tracksOverlay}
               style={{
                 width: `calc(100% - ${overlayOffset.x}px)`,
@@ -314,14 +326,15 @@ const Schedule: FC<{
               }}
               ref={overlayRef}
             >
-              {dragIndex !== -1 && (
+              {dragIndex && (
                 <TrackCard
-                  duration={processedTracks[dragIndex].duration}
-                  index={dragIndex}
+                  duration={dayjs(
+                    data[dragIndex.type][dragIndex.id].enddate
+                  ).diff(dayjs(data[dragIndex.type][dragIndex.id].startdate))}
                   start={
                     dayjs(fakeStart).add(fakeDayDelta, "day").unix() * 1000
                   }
-                  title={processedTracks[dragIndex].title}
+                  title={data[dragIndex.type][dragIndex.id].track?.title}
                   fake
                 />
                 // <div
@@ -340,17 +353,16 @@ const Schedule: FC<{
                 //   {processedTracks[dragIndex].title}
                 // </div>
               )}
-              {processedTracks.map((track, index) => (
+              {Object.entries(data.old).map(([id, track]) => (
                 <TrackCard
-                  duration={track.duration}
-                  index={index}
-                  onMouseDown={onMouseDown}
-                  start={track.start}
-                  title={track.title}
+                  duration={dayjs(track.enddate).diff(dayjs(track.startdate))}
+                  onMouseDown={(e) => onMouseDown(e, { id, type: "old" })}
+                  start={dayjs(track.startdate).unix() * 1000}
+                  title={track.track?.title}
                   key={track.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClick(index);
+                    onClick({ id, type: "old" });
                   }}
                 />
               ))}

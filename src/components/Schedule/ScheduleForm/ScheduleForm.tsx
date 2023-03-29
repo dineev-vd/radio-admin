@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import { FC, useState } from "react";
 import { Button, Form, Modal, Stack } from "react-bootstrap";
-import { Controller, useForm } from "react-hook-form";
 import { ScheduleChange } from "../../../store/api/channels/patchSchedule";
 import { useGetTrackQuery } from "../../../store/api/tracks/getTrack";
 import { useGetTracksQuery } from "../../../store/api/tracks/getTracks";
@@ -10,7 +9,7 @@ import TrackDisplay from "../../Tracks/Track/TrackDisplay";
 
 type TrackSelectProps = {
   onChange: (trackId: string) => void;
-  value: string;
+  value?: string;
 };
 
 const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
@@ -22,7 +21,10 @@ const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
-  const { data: trackData } = useGetTrackQuery({ id: value });
+  const { data: trackData } = useGetTrackQuery(
+    { id: value ?? "" },
+    { skip: !value }
+  );
 
   return (
     <>
@@ -67,48 +69,52 @@ const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
 
 const ScheduleForm: FC<
   Partial<ScheduleChange> & {
-    onSubmit: (change: ScheduleChange) => void;
+    onChange: (change: Partial<ScheduleChange>) => void;
   }
-> = ({ onSubmit, startdate, enddate, ...defaultValues }) => {
-  const { register, handleSubmit, control } = useForm<ScheduleChange>({
-    defaultValues: {
-      ...defaultValues,
-      startdate: dayjs(startdate).format("YYYY-MM-DDTHH:mm:ss"),
-      enddate: dayjs(enddate).format("YYYY-MM-DDTHH:mm:ss"),
-    },
-  });
+> = ({ onChange, ...defaultValues }) => {
+  const { enddate, startdate, trackid } = defaultValues;
+
+  const parsedStartDate = dayjs(startdate).format("YYYY-MM-DDTHH:mm:ss");
+  const parsedEndDate = dayjs(enddate).format("YYYY-MM-DDTHH:mm:ss");
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
-      <Stack gap={2}>
-        <Form.Group>
-          <Form.Label>Время начала</Form.Label>
-          <Form.Control
-            type="datetime-local"
-            step={1}
-            {...register("startdate", {
-              setValueAs: (value) => dayjs(value).utc().format(),
-            })}
-          ></Form.Control>
-        </Form.Group>
-        <Form.Group>
-          <Form.Label>Время конца</Form.Label>
-          <Form.Control
-            type="datetime-local"
-            step={1}
-            {...register("enddate", {
-              setValueAs: (value) => dayjs(value).utc().format(),
-            })}
-          ></Form.Control>
-        </Form.Group>
-        <Controller
-          name="trackid"
-          control={control}
-          render={({ field }) => <TrackSelect {...field} />}
+    <Stack gap={2}>
+      <Form.Group>
+        <Form.Label>Время начала</Form.Label>
+        <Form.Control
+          type="datetime-local"
+          step={1}
+          value={parsedStartDate}
+          onChange={(e) =>
+            onChange({
+              ...defaultValues,
+              startdate: dayjs(e.target.value).utc().format(),
+            })
+          }
         />
-        <Button type="submit">Сохранить</Button>
-      </Stack>
-    </Form>
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Время конца</Form.Label>
+        <Form.Control
+          type="datetime-local"
+          step={1}
+          value={parsedEndDate}
+          onChange={(e) =>
+            onChange({
+              ...defaultValues,
+              enddate: dayjs(e.target.value).utc().format(),
+            })
+          }
+        />
+      </Form.Group>
+
+      <TrackSelect
+        value={trackid}
+        onChange={(id) => onChange({ ...defaultValues, trackid: id })}
+      />
+
+      <Button type="submit">Сохранить</Button>
+    </Stack>
   );
 };
 

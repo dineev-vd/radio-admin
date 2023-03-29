@@ -1,74 +1,117 @@
 import dayjs from "dayjs";
-import ru from "dayjs/locale/ru";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import { FC, useEffect, useMemo, useState } from "react";
-import { Button, Form, Stack } from "react-bootstrap";
+import { Button, Stack } from "react-bootstrap";
+import { v4 as uuidv4 } from "uuid";
+import DateRangeSelect, {
+  DateRange,
+} from "../../components/DateRangeSelect/DateRangeSelect";
 import Schedule from "../../components/Schedule/Schedule";
 import ScheduleForm from "../../components/Schedule/ScheduleForm/ScheduleForm";
 import { useAddTrackToChannelMutation } from "../../store/api/channels/addTrackToChannel";
-import { useGetScheduleQuery } from "../../store/api/channels/getSchedule";
 import {
-  ScheduleChange,
-  usePatchScheduleMutation,
-} from "../../store/api/channels/patchSchedule";
+  ScheduleTrack,
+  useGetScheduleQuery,
+} from "../../store/api/channels/getSchedule";
+import { usePatchScheduleMutation } from "../../store/api/channels/patchSchedule";
 
 dayjs.extend(weekday);
 dayjs.extend(utc);
 
+export type NewScheduleTrack = Omit<ScheduleTrack, "id">;
+
+export type ScheduleType = "new" | "old";
+
+export type SelectedSchedule =
+  | {
+      id: string;
+      type: ScheduleType;
+    }
+  | undefined;
+
 const ScheduleView: FC<{ id: string }> = ({ id }) => {
-  const [changes, setChanges] = useState<Record<string, ScheduleChange>>({});
+  const [changes, setChanges] = useState<
+    Record<string, Partial<ScheduleTrack>>
+  >({});
+  const [newTracks, setNewTracks] = useState<
+    Record<string, Partial<NewScheduleTrack>>
+  >({});
 
-  const [date, setDate] = useState<string>(dayjs().format("YYYY-MM-DD"));
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-  const [isAddingTrack, setIsAddingTrack] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<SelectedSchedule>();
 
-  const [from, to] = useMemo(() => {
-    const curDate = dayjs(date).locale(ru);
+  const [selectedRange, setSelectedRange] = useState<DateRange>({
+    from: dayjs(),
+    to: dayjs().add(5, "day"),
+  });
 
-    return [
-      curDate.weekday(0).hour(0).minute(0).second(0),
-      curDate.weekday(7).hour(0).minute(0).second(0),
-    ];
-  }, [date]);
-
-  const { data } = useGetScheduleQuery({
+  const { data, isFetching } = useGetScheduleQuery({
     id,
-    from: from.format(),
-    to: to.format(),
+    from: selectedRange.from.format(),
+    to: selectedRange.to.format(),
   });
 
   const [trigger, { isSuccess }] = usePatchScheduleMutation();
   const [triggerAddTrack] = useAddTrackToChannelMutation();
 
   useEffect(() => {
-    if (isSuccess) {
+    if (isSuccess && !isFetching) {
       setChanges({});
     }
-  }, [isSuccess]);
+  }, [isFetching, isSuccess]);
 
-  const parsedData = useMemo(() => {
-    return data?.tracks.map((track) => {
-      if (track.id in changes) {
-        return { ...track, ...changes };
-      }
+  const oldTracks = useMemo(() => {
+    return (
+      data &&
+      Object.fromEntries(
+        Object.entries(data).map(([id, track]) => {
+          return [id, id in changes ? { ...track, ...changes[id] } : track];
+        })
+      )
+    );
+  }, [changes, data]);
 
-      return track;
-    });
-  }, [changes, data?.tracks]);
+  console.log(changes);
 
   return (
     <Stack gap={3}>
-      <Button onClick={() => setIsAddingTrack(true)}>
+      <Button
+        onClick={() => {
+          setNewTracks((prev) => ({ ...prev, [uuidv4()]: {} }));
+        }}
+      >
         Добавить трек в расписание
       </Button>
-      <Form.Control
-        onChange={(e) => setDate(e.target.value)}
-        type={"date"}
-        value={date}
-      />
-      {!!Object.keys(changes).length && (
-        <Button onClick={() => trigger(Object.values(changes))}>
+      <DateRangeSelect onChange={setSelectedRange} />
+      {!!Object.keys(changes).length && data && (
+        <Button
+          onClick={() =>
+            trigger(
+              Object.entries(changes).map(
+                ([id, { track, startdate, enddate, ...change }]) => {
+                  const {
+                    track: dataTrack,
+                    startdate: dataStart,
+                    enddate: dataEnd,
+                    ...dataEntry
+                  } = data[id];
+
+                  return {
+                    ...dataEntry,
+                    ...change,
+                    startdate: dayjs(startdate ?? dataStart)
+                      .utc()
+                      .format(),
+                    enddate: dayjs(enddate ?? dataEnd)
+                      .utc()
+                      .format(),
+                    trackid: track?.id ?? dataTrack.id.toString(),
+                  };
+                }
+              )
+            )
+          }
+        >
           Сохранить изменения
         </Button>
       )}
@@ -77,28 +120,24 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
         className="align-items-stretch h-100"
         gap={3}
       >
-        {parsedData && (
+        {oldTracks && (
           <Schedule
-            date={date}
-            data={parsedData}
-            onClick={(index) => {
-              setSelectedIndex(index);
-              setIsAddingTrack(false);
-            }}
+            selectedRange={selectedRange}
+            data={{ new: newTracks, old: oldTracks }}
+            onClick={setSelectedIndex}
             onChange={
-              (index, start, duration) =>
-                setChanges((prev) => ({
-                  ...prev,
-                  [parsedData[index].id]: {
-                    id: parsedData[index].id,
-                    startdate: dayjs(start).utc().format(),
-                    enddate: dayjs(start + duration)
-                      .utc()
-                      .format(),
-                    trackid: parsedData[index].track.id.toString(),
-                    channelid: id,
-                  },
-                }))
+              ({ change, id, type }) => {
+                type === "old"
+                  ? setChanges((prev) => ({
+                      ...prev,
+                      [id]: Object.assign({}, prev[id], change),
+                    }))
+                  : setNewTracks((prev) => ({
+                      ...prev,
+                      [id]: Object.assign({}, prev[id], change),
+                    }));
+              }
+
               // trigger([
               //   {
               //     id: parsedData[index].id,
@@ -113,10 +152,36 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
             }
           />
         )}
-        {isAddingTrack ? (
+        {selectedIndex && data && (
+          <ScheduleForm
+            {...(selectedIndex.type === "new" ? newTracks : data)[
+              selectedIndex.id
+            ]}
+            onChange={(change) => {
+              selectedIndex.type === "old"
+                ? setChanges((prev) => ({
+                    ...prev,
+                    [selectedIndex.id]: Object.assign(
+                      {},
+                      prev[selectedIndex.id],
+                      change
+                    ),
+                  }))
+                : setNewTracks((prev) => ({
+                    ...prev,
+                    [selectedIndex.id]: Object.assign(
+                      {},
+                      prev[selectedIndex.id],
+                      change
+                    ),
+                  }));
+            }}
+          />
+        )}
+        {/* {isAddingTrack ? (
           <>
             <ScheduleForm
-              onSubmit={(change) =>
+              onChange={(change) =>
                 triggerAddTrack({ ...change, channelid: id })
               }
             />
@@ -125,7 +190,7 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
           <>
             {data && selectedIndex !== -1 && (
               <ScheduleForm
-                onSubmit={(change) => {
+                onChange={(change) => {
                   setChanges((prev) => ({ ...prev, [change.id]: change }));
                   setSelectedIndex(-1);
                 }}
@@ -135,7 +200,7 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
               />
             )}
           </>
-        )}
+        )} */}
       </Stack>
     </Stack>
   );

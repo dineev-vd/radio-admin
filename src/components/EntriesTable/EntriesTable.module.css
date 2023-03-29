@@ -2,3 +2,7 @@
   overflow-y: scroll;
   flex-basis: 0;
 }
+
+.table {
+  cursor: pointer;
+}

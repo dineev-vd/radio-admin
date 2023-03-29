@@ -18,7 +18,7 @@ const EntriesTable: FC<EntriesTableProps> = ({
       {data.length && (
         <Col className={styles.scroll}>
           <div>
-            <Table striped>
+            <Table striped hover className={styles.table}>
               <thead>
                 <tr>
                   {Object.keys(data[0]).map((key, columnIndex) => (

@@ -9,7 +9,7 @@ const ChannelForm: FC<Channel> = ({ description, id, logo, status, title }) => {
         <img
           style={{ width: 75, height: 75, borderRadius: "50%" }}
           alt={""}
-          src={`http://localhost:8080/${logo}`}
+          src={logo}
         ></img>
         <h2>{title}</h2>
       </Stack>

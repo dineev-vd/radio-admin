@@ -2,14 +2,18 @@ import radioApi from "..";
 import { Track } from "../tracks/getTracks";
 
 export type ScheduleResponse = {
-  tracks: {
-    enddate: string;
-    id: string;
-    startdate: string;
-    channelid: string;
-    track: Track;
-  }[];
+  tracks: ScheduleTrack[];
 };
+
+export type ScheduleTrack = {
+  enddate: string;
+  id: string;
+  startdate: string;
+  channelid: string;
+  track: Track;
+};
+
+export type ScheduleParsedResponse = Record<string, ScheduleTrack>;
 
 export type ScheduleRangeParams = {
   from: string;
@@ -19,15 +23,24 @@ export type ScheduleRangeParams = {
 
 const scheduleEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
-    getSchedule: build.query<ScheduleResponse, ScheduleRangeParams>({
+    getSchedule: build.query<ScheduleParsedResponse, ScheduleRangeParams>({
       query: ({ id, ...rest }) => ({
         url: `channel/${id}/schedule-range`,
         params: rest,
       }),
       providesTags: (result) =>
         result
-          ? result.tracks.map((t) => ({ id: t.id, type: "SCHEDULE" }))
+          ? Object.values(result).map((t) => ({ id: t.id, type: "SCHEDULE" }))
           : [],
+      transformResponse: (response: ScheduleResponse) => {
+        const dict: ScheduleParsedResponse = {};
+
+        response.tracks.forEach((track) => {
+          dict[track.id] = track;
+        });
+
+        return dict;
+      },
     }),
   }),
   overrideExisting: false,
