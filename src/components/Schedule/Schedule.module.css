@@ -19,7 +19,6 @@
 
 .trackCard,
 .trackCardFake {
-  background-color: lightcoral;
   border-radius: 8px;
   position: absolute;
   user-select: none;
@@ -39,4 +38,12 @@
   background: white;
   position: sticky;
   top: -1px;
+}
+
+.old {
+  background-color: lightcoral;
+}
+
+.new {
+  background-color: goldenrod;
 }

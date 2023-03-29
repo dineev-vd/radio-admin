@@ -2,20 +2,22 @@ import radioApi from "..";
 import { ScheduleResponse } from "./getSchedule";
 
 export type NewSchedule = {
-  trackid: string;
   channelid: string;
-} & Pick<ScheduleResponse["tracks"][number], "enddate" | "startdate">;
+  tracks: ({ trackid: string } & Pick<
+    ScheduleResponse["tracks"][number],
+    "enddate" | "startdate"
+  >)[];
+};
 
 const addTrackToChannelEndpoint = radioApi.injectEndpoints({
   endpoints: (build) => ({
     addTrackToChannel: build.mutation<void, NewSchedule>({
-      query: ({ channelid, ...body }) => ({
+      query: ({ channelid, tracks }) => ({
         url: `channel/${channelid}/add-track`,
         method: "POST",
-        body,
+        body: { tracks },
       }),
-      //   invalidatesTags: (_, __, array) =>
-      //     array.map(({ id }) => ({ id, type: "SCHEDULE" })),
+      invalidatesTags: ["SCHEDULE"],
     }),
   }),
   overrideExisting: false,

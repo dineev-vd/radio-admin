@@ -1,18 +1,17 @@
 import dayjs from "dayjs";
-import { FC, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { Button, Form, Modal, Stack } from "react-bootstrap";
-import { ScheduleChange } from "../../../store/api/channels/patchSchedule";
-import { useGetTrackQuery } from "../../../store/api/tracks/getTrack";
-import { useGetTracksQuery } from "../../../store/api/tracks/getTracks";
+import { ScheduleTrack } from "../../../store/api/channels/getSchedule";
+import { Track, useGetTracksQuery } from "../../../store/api/tracks/getTracks";
 import EntriesTable from "../../EntriesTable/EntriesTable";
 import TrackDisplay from "../../Tracks/Track/TrackDisplay";
 
 type TrackSelectProps = {
-  onChange: (trackId: string) => void;
-  value?: string;
+  onChange: (track: Track) => void;
+  value?: Track;
 };
 
-const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
+const TrackSelect: FC<TrackSelectProps> = ({ onChange, value: trackData }) => {
   const [query, setQuery] = useState("");
   const { data } = useGetTracksQuery({ query });
 
@@ -20,11 +19,6 @@ const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
-
-  const { data: trackData } = useGetTrackQuery(
-    { id: value ?? "" },
-    { skip: !value }
-  );
 
   return (
     <>
@@ -47,8 +41,8 @@ const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
               (data.tracks.length ? (
                 <EntriesTable
                   data={data.tracks}
-                  onEntryClick={(id) => {
-                    onChange(id);
+                  onEntryClick={(id, entry) => {
+                    onChange(entry);
                     setShow(false);
                   }}
                 />
@@ -68,14 +62,64 @@ const TrackSelect: FC<TrackSelectProps> = ({ onChange, value }) => {
 };
 
 const ScheduleForm: FC<
-  Partial<ScheduleChange> & {
-    onChange: (change: Partial<ScheduleChange>) => void;
+  Partial<ScheduleTrack> & {
+    onChange: (change: Partial<ScheduleTrack>) => void;
   }
 > = ({ onChange, ...defaultValues }) => {
-  const { enddate, startdate, trackid } = defaultValues;
+  const { enddate, startdate, track } = defaultValues;
 
   const parsedStartDate = dayjs(startdate).format("YYYY-MM-DDTHH:mm:ss");
   const parsedEndDate = dayjs(enddate).format("YYYY-MM-DDTHH:mm:ss");
+
+  const [isEndFromDuration, setIsEndFromDuration] = useState(false);
+
+  useEffect(() => {
+    const duration = dayjs(defaultValues.enddate).diff(
+      dayjs(defaultValues.startdate),
+      "seconds"
+    );
+
+    if (track && duration === +track.duration / 1000000000) {
+      setIsEndFromDuration(true);
+    } else {
+      setIsEndFromDuration(false);
+    }
+  }, [defaultValues.enddate, defaultValues.startdate, track]);
+
+  const handleCheck = useCallback(() => {
+    const duration = dayjs(defaultValues.enddate).diff(
+      dayjs(defaultValues.startdate),
+      "seconds"
+    );
+
+    if (
+      !isEndFromDuration &&
+      track &&
+      duration !== +track.duration / 1000000000
+    ) {
+      console.log("check");
+      onChange({
+        ...defaultValues,
+        enddate: dayjs(defaultValues.startdate)
+          .add(+track.duration / 1000000000, "seconds")
+          .format(),
+      });
+    }
+
+    setIsEndFromDuration((p) => !p);
+  }, [defaultValues, isEndFromDuration, onChange, track]);
+
+  const onTrackSelect = (value: Track) => {
+    if (value) {
+      onChange({
+        ...defaultValues,
+        track: value,
+        enddate: dayjs(defaultValues.startdate)
+          .add(+value.duration / 1000000000, "seconds")
+          .format(),
+      });
+    }
+  };
 
   return (
     <Stack gap={2}>
@@ -88,32 +132,38 @@ const ScheduleForm: FC<
           onChange={(e) =>
             onChange({
               ...defaultValues,
-              startdate: dayjs(e.target.value).utc().format(),
+              startdate: dayjs(e.target.value).format(),
             })
           }
         />
       </Form.Group>
+      {!isEndFromDuration && (
+        <Form.Group>
+          <Form.Label>Время конца</Form.Label>
+          <Form.Control
+            type="datetime-local"
+            step={1}
+            value={parsedEndDate}
+            onChange={(e) =>
+              onChange({
+                ...defaultValues,
+                enddate: dayjs(e.target.value).format(),
+              })
+            }
+          />
+        </Form.Group>
+      )}
       <Form.Group>
         <Form.Label>Время конца</Form.Label>
-        <Form.Control
-          type="datetime-local"
-          step={1}
-          value={parsedEndDate}
-          onChange={(e) =>
-            onChange({
-              ...defaultValues,
-              enddate: dayjs(e.target.value).utc().format(),
-            })
-          }
-        />
+        <Form.Check checked={isEndFromDuration} onChange={handleCheck} />
       </Form.Group>
 
       <TrackSelect
-        value={trackid}
-        onChange={(id) => onChange({ ...defaultValues, trackid: id })}
+        value={track}
+        onChange={(track) => {
+          onTrackSelect(track);
+        }}
       />
-
-      <Button type="submit">Сохранить</Button>
     </Stack>
   );
 };

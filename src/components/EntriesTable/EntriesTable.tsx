@@ -1,18 +1,21 @@
-import { FC } from "react";
 import { Button, Col, Table } from "react-bootstrap";
 import styles from "./EntriesTable.module.css";
 
-type EntriesTableProps = {
-  data: (Record<string, string | number> & { id: string | number })[];
+type EntriesTableProps<
+  T extends Record<string, string | number> & { id: string | number }
+> = {
+  data: T[];
   onDelete?: (id: string) => void;
-  onEntryClick?: (id: string) => void;
+  onEntryClick?: (id: string, entry: T) => void;
 };
 
-const EntriesTable: FC<EntriesTableProps> = ({
+const EntriesTable = <
+  T extends Record<string, string | number> & { id: string | number }
+>({
   data,
   onDelete,
   onEntryClick,
-}) => {
+}: EntriesTableProps<T>) => {
   return (
     <>
       {data.length && (
@@ -30,7 +33,7 @@ const EntriesTable: FC<EntriesTableProps> = ({
               <tbody>
                 {data.map((row, rowIndex) => (
                   <tr
-                    onClick={() => onEntryClick?.(row.id.toString())}
+                    onClick={() => onEntryClick?.(row.id.toString(), row)}
                     key={rowIndex}
                   >
                     {Object.entries(row).map(([_, value], columnIndex) => (

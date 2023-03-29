@@ -41,8 +41,6 @@ const customBaseQuery: BaseQueryFn<
       }
     : {};
 
-  console.log(authHeader);
-
   if (typeof args === "string") {
     response = await baseQuery(
       { headers: authHeader, url: args },

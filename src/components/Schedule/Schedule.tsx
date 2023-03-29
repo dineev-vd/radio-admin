@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Table } from "react-bootstrap";
+import { Form, Table } from "react-bootstrap";
 import { ScheduleTrack } from "../../store/api/channels/getSchedule";
 import { SelectedSchedule } from "../../views/ChannelsView/ScheduleView";
 import { DateRange } from "../DateRangeSelect/DateRangeSelect";
@@ -22,8 +22,8 @@ dayjs.extend(relativeTime);
 dayjs.extend(weekday);
 dayjs.extend(duration);
 
-const DIVIDER = 6;
-const SNAP_RANGE_MILLISECONDS = 5 * 60 * 1000;
+const DIVIDER_RANGE = [2, 3, 6, 12, 20, 30, 60];
+const SNAP_RANGE_MILLISECONDS = 0.5 * 60 * 1000;
 
 type ScheduleCollection = Record<string, Partial<ScheduleTrack>>;
 
@@ -53,6 +53,9 @@ const Schedule: FC<ScheduleProps> = ({
   onClick,
   onChange,
 }) => {
+  const [dividerIndex, setDividerIndex] = useState(3);
+  const divider = useMemo(() => DIVIDER_RANGE[dividerIndex], [dividerIndex]);
+
   // const tracks = useMemo(() => {
   //   return data.map(({ type, scheduleTrack: track }) => ({
   //     type,
@@ -113,7 +116,6 @@ const Schedule: FC<ScheduleProps> = ({
     }
   }, []);
 
-  const [shouldDisplayFake, setShouldDisplayFake] = useState(false);
   const startOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [dragIndex, setDragId] = useState<SelectedSchedule>();
@@ -144,13 +146,6 @@ const Schedule: FC<ScheduleProps> = ({
         setFakeDayDelta(dragDay - startDayRef.current);
         fakeDayDeltaRef.current = dragDay - startDayRef.current;
 
-        // const y = Math.min(
-        //   Math.max(0, e.y - rect.y - startOffsetRef.current.y),
-        //   rect.height -
-        //     (rect.height * processedTracks[dragIndexRef.current].duration) /
-        //       1000 /
-        //       (24 * 60 * 60)
-        // );
         const newStartDelta =
           ((e.y - startPositionRef.current) / rect.height) *
           24 *
@@ -180,9 +175,12 @@ const Schedule: FC<ScheduleProps> = ({
           );
 
           if (snapStart) {
-            newStart = snapStart.unix() * 1000 - (newEnd - newStart);
+            newStart =
+              snapStart.subtract(fakeDayDeltaRef.current, "days").unix() * 1000;
           } else if (snapEnd) {
-            newStart = snapEnd.unix() * 1000;
+            newStart =
+              snapEnd.subtract(fakeDayDeltaRef.current, "days").unix() * 1000 -
+              (newEnd - newStart);
           }
 
           setFakeStart(newStart);
@@ -307,10 +305,13 @@ const Schedule: FC<ScheduleProps> = ({
     [data.new, data.old, handleMouseMove, handleMouseUp]
   );
 
-  console.log(snapsRef.current);
-
   return (
     <div className={styles.wrapper}>
+      <Form.Range
+        value={dividerIndex}
+        max={DIVIDER_RANGE.length - 1}
+        onChange={(e) => setDividerIndex(+e.target.value)}
+      />
       <div className={styles.container}>
         <div className={styles.tableContainer}>
           <div style={{ position: "relative" }}>
@@ -335,6 +336,7 @@ const Schedule: FC<ScheduleProps> = ({
                     dayjs(fakeStart).add(fakeDayDelta, "day").unix() * 1000
                   }
                   title={data[dragIndex.type][dragIndex.id].track?.title}
+                  variant={dragIndex.type}
                   fake
                 />
                 // <div
@@ -364,6 +366,21 @@ const Schedule: FC<ScheduleProps> = ({
                     e.stopPropagation();
                     onClick({ id, type: "old" });
                   }}
+                  variant={"old"}
+                />
+              ))}
+              {Object.entries(data.new).map(([id, track]) => (
+                <TrackCard
+                  duration={dayjs(track.enddate).diff(dayjs(track.startdate))}
+                  onMouseDown={(e) => onMouseDown(e, { id, type: "new" })}
+                  start={dayjs(track.startdate).unix() * 1000}
+                  title={track.track?.title}
+                  key={track.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick({ id, type: "new" });
+                  }}
+                  variant={"new"}
                 />
               ))}
             </div>
@@ -377,13 +394,13 @@ const Schedule: FC<ScheduleProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {Array(24 * DIVIDER)
+                {Array(24 * divider)
                   .fill(0)
                   .map((_, rowIndex) => (
                     <tr key={rowIndex}>
                       <td>
-                        {Math.floor(rowIndex / DIVIDER)}:
-                        {(60 / DIVIDER) * (rowIndex % DIVIDER)}
+                        {Math.floor(rowIndex / divider)}:
+                        {(60 / divider) * (rowIndex % divider)}
                       </td>
                       {Array(7)
                         .fill(0)

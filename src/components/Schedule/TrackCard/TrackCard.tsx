@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import dayjs from "dayjs";
 import ru from "dayjs/locale/ru";
 import duration from "dayjs/plugin/duration";
@@ -17,6 +18,7 @@ type TrackCardProps = {
   onMouseDown?: (e: MouseEvent) => void;
   onClick?: (e: MouseEvent) => void;
   fake?: boolean;
+  variant: "new" | "old" | "changed";
 };
 
 const TrackCard: FC<TrackCardProps> = ({
@@ -26,6 +28,7 @@ const TrackCard: FC<TrackCardProps> = ({
   onMouseDown,
   onClick,
   fake = false,
+  variant,
 }) => {
   const array = useMemo(() => {
     let curArray = [start];
@@ -63,7 +66,7 @@ const TrackCard: FC<TrackCardProps> = ({
           <div
             onClick={onClick}
             key={dayAddition}
-            className={styles.trackCard}
+            className={classNames(styles.trackCard, styles[variant])}
             onMouseDown={(e) => onMouseDown?.(e)}
             style={{
               width: `calc(100% / 7)`,

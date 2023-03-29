@@ -1,7 +1,8 @@
 import dayjs from "dayjs";
+import minMax from "dayjs/plugin/minMax";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Stack } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
 import DateRangeSelect, {
@@ -18,6 +19,7 @@ import { usePatchScheduleMutation } from "../../store/api/channels/patchSchedule
 
 dayjs.extend(weekday);
 dayjs.extend(utc);
+dayjs.extend(minMax);
 
 export type NewScheduleTrack = Omit<ScheduleTrack, "id">;
 
@@ -52,13 +54,20 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
   });
 
   const [trigger, { isSuccess }] = usePatchScheduleMutation();
-  const [triggerAddTrack] = useAddTrackToChannelMutation();
+  const [triggerAddTrack, { isSuccess: isSuccessAdding }] =
+    useAddTrackToChannelMutation();
 
   useEffect(() => {
     if (isSuccess && !isFetching) {
       setChanges({});
     }
   }, [isFetching, isSuccess]);
+
+  useEffect(() => {
+    if (isSuccessAdding && !isFetching) {
+      setNewTracks({});
+    }
+  }, [isFetching, isSuccessAdding]);
 
   const oldTracks = useMemo(() => {
     return (
@@ -71,50 +80,84 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
     );
   }, [changes, data]);
 
-  console.log(changes);
+  const lastEnd = useMemo(() => {
+    if (data) {
+      const lastArray = Object.values(data)
+        .map((value) => dayjs(value.enddate))
+        .concat(Object.values(newTracks).map((value) => dayjs(value.enddate)));
+
+      if (lastArray.length) {
+        return dayjs.max(lastArray);
+      }
+    }
+
+    return dayjs();
+  }, [data, newTracks]);
+
+  const addNewTrack = useCallback(() => {
+    const newTrack: Partial<ScheduleTrack> = {
+      startdate: (lastEnd ?? dayjs()).format(),
+      enddate: (lastEnd ?? dayjs()).add(10, "minutes").format(),
+    };
+
+    const uuid = uuidv4();
+    setNewTracks((prev) => ({ ...prev, [uuid]: newTrack }));
+    setSelectedIndex({ type: "new", id: uuid });
+  }, [lastEnd]);
+
+  const pushChanges = () => {
+    if (Object.keys(newTracks).length) {
+      triggerAddTrack({
+        channelid: id,
+        tracks: Object.values(newTracks).map((t) => ({
+          trackid: t.track?.id ?? "0",
+          enddate: dayjs(t.enddate).utc().format(),
+          startdate: dayjs(t.startdate).utc().format(),
+        })),
+      });
+    }
+
+    if (Object.keys(changes).length) {
+      data &&
+        trigger(
+          Object.entries(changes).map(
+            ([id, { track, startdate, enddate, ...change }]) => {
+              const {
+                track: dataTrack,
+                startdate: dataStart,
+                enddate: dataEnd,
+                ...dataEntry
+              } = data[id];
+
+              return {
+                ...dataEntry,
+                ...change,
+                startdate: dayjs(startdate ?? dataStart)
+                  .utc()
+                  .format(),
+                enddate: dayjs(enddate ?? dataEnd)
+                  .utc()
+                  .format(),
+                trackid: track?.id.toString() ?? dataTrack.id.toString(),
+              };
+            }
+          )
+        );
+    }
+  };
 
   return (
     <Stack gap={3}>
       <Button
         onClick={() => {
-          setNewTracks((prev) => ({ ...prev, [uuidv4()]: {} }));
+          addNewTrack();
         }}
       >
         Добавить трек в расписание
       </Button>
       <DateRangeSelect onChange={setSelectedRange} />
-      {!!Object.keys(changes).length && data && (
-        <Button
-          onClick={() =>
-            trigger(
-              Object.entries(changes).map(
-                ([id, { track, startdate, enddate, ...change }]) => {
-                  const {
-                    track: dataTrack,
-                    startdate: dataStart,
-                    enddate: dataEnd,
-                    ...dataEntry
-                  } = data[id];
-
-                  return {
-                    ...dataEntry,
-                    ...change,
-                    startdate: dayjs(startdate ?? dataStart)
-                      .utc()
-                      .format(),
-                    enddate: dayjs(enddate ?? dataEnd)
-                      .utc()
-                      .format(),
-                    trackid: track?.id ?? dataTrack.id.toString(),
-                  };
-                }
-              )
-            )
-          }
-        >
-          Сохранить изменения
-        </Button>
-      )}
+      {(!!Object.keys(changes).length || !!Object.keys(newTracks).length) &&
+        data && <Button onClick={pushChanges}>Сохранить изменения</Button>}
       <Stack
         direction="horizontal"
         className="align-items-stretch h-100"
@@ -152,7 +195,7 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
             }
           />
         )}
-        {selectedIndex && data && (
+        {/* {selectedIndex && data && (
           <ScheduleForm
             {...(selectedIndex.type === "new" ? newTracks : data)[
               selectedIndex.id
@@ -177,30 +220,29 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
                   }));
             }}
           />
-        )}
-        {/* {isAddingTrack ? (
-          <>
-            <ScheduleForm
-              onChange={(change) =>
-                triggerAddTrack({ ...change, channelid: id })
-              }
-            />
-          </>
-        ) : (
-          <>
-            {data && selectedIndex !== -1 && (
-              <ScheduleForm
-                onChange={(change) => {
-                  setChanges((prev) => ({ ...prev, [change.id]: change }));
-                  setSelectedIndex(-1);
-                }}
-                {...data.tracks[selectedIndex]}
-                trackid={data.tracks[selectedIndex].track.id.toString()}
-                channelid={id}
-              />
-            )}
-          </>
         )} */}
+
+        <>
+          {oldTracks && selectedIndex && (
+            <ScheduleForm
+              onChange={(change) => {
+                selectedIndex.type === "old"
+                  ? setChanges((prev) => ({
+                      ...prev,
+                      [selectedIndex.id]: change,
+                    }))
+                  : setNewTracks((prev) => ({
+                      ...prev,
+                      [selectedIndex.id]: change,
+                    }));
+                // setSelectedIndex(undefined);
+              }}
+              {...(selectedIndex.type === "old" ? oldTracks : newTracks)[
+                selectedIndex.id
+              ]}
+            />
+          )}
+        </>
       </Stack>
     </Stack>
   );
