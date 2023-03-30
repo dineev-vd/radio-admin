@@ -1,8 +1,16 @@
 .scroll {
   overflow-y: scroll;
   flex-basis: 0;
+  height: 100%;
 }
 
 .table {
   cursor: pointer;
+  table-layout: fixed;
+}
+
+.table th,
+td {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

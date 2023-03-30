@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { FC, useCallback, useEffect, useState } from "react";
 import { Button, Form, Modal, Stack } from "react-bootstrap";
+import { useDeleteScheduleMutation } from "../../../store/api/channels/deleteSchedule";
 import { ScheduleTrack } from "../../../store/api/channels/getSchedule";
 import { Track, useGetTracksQuery } from "../../../store/api/tracks/getTracks";
 import EntriesTable from "../../EntriesTable/EntriesTable";
@@ -121,8 +122,16 @@ const ScheduleForm: FC<
     }
   };
 
+  const [trigger] = useDeleteScheduleMutation({ fixedCacheKey: "0" });
+
   return (
     <Stack gap={2}>
+      <Button
+        variant="danger"
+        onClick={() => defaultValues.id && trigger({ id: defaultValues.id })}
+      >
+        Удалить
+      </Button>
       <Form.Group>
         <Form.Label>Время начала</Form.Label>
         <Form.Control

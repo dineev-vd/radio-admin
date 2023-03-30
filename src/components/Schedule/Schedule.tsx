@@ -11,7 +11,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, Form, OverlayTrigger, Popover, Table } from "react-bootstrap";
+import {
+  Button,
+  Dropdown,
+  DropdownButton,
+  Form,
+  OverlayTrigger,
+  Popover,
+  Stack,
+  Table,
+} from "react-bootstrap";
 import { ScheduleTrack } from "../../store/api/channels/getSchedule";
 import { SelectedSchedule } from "../../views/ChannelsView/ScheduleView";
 import { DateRange } from "../DateRangeSelect/DateRangeSelect";
@@ -264,6 +273,12 @@ const Schedule: FC<ScheduleProps> = ({
     [data.new, data.old, handleMouseMove, handleMouseUp]
   );
 
+  const [nowDate, setNowDate] = useState<Dayjs>(dayjs());
+
+  useEffect(() => {
+    setInterval(() => setNowDate(dayjs()), 1000);
+  }, []);
+
   return (
     <div className={styles.wrapper}>
       <Form.Group>
@@ -277,6 +292,20 @@ const Schedule: FC<ScheduleProps> = ({
       <div className={styles.container}>
         <div className={styles.tableContainer}>
           <div style={{ position: "relative" }}>
+            <div
+              style={{
+                width: "100%",
+                height: 1,
+                backgroundColor: "red",
+                transform: `translateY(${
+                  ((nowDate.second() +
+                    nowDate.minute() * 60 +
+                    nowDate.hour() * 60 * 60) /
+                    (24 * 60 * 60)) *
+                  (overlayRef.current?.scrollHeight ?? 1)
+                }px)`,
+              }}
+            ></div>
             <div
               onClick={() => onClick(undefined)}
               className={styles.tracksOverlay}
@@ -337,13 +366,33 @@ const Schedule: FC<ScheduleProps> = ({
                   <th ref={headerRef}></th>
                   {weekDays.map((date, index) => (
                     <th key={index}>
-                      <button onClick={() => onReshuffle(date)}>
-                        Перемешать
-                      </button>
-                      <CopyFromDayPopover
-                        copy={(from) => onDayCopy(from, date)}
-                      />
-                      {date.format("DD.MM.YYYY")}
+                      <Stack
+                        direction="horizontal"
+                        className="justify-content-between"
+                      >
+                        {date.format("DD.MM.YYYY")}
+                        <DropdownButton
+                          id="dropdown-item-button"
+                          title={""}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          <Dropdown.Item
+                            as="button"
+                            onClick={() => onReshuffle(date)}
+                          >
+                            Перемешать
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            as="button"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <CopyFromDayPopover
+                              copy={(from) => onDayCopy(from, date)}
+                            />
+                          </Dropdown.Item>
+                        </DropdownButton>
+                      </Stack>
                     </th>
                   ))}
                 </tr>
@@ -354,13 +403,20 @@ const Schedule: FC<ScheduleProps> = ({
                   .map((_, rowIndex) => (
                     <tr key={rowIndex}>
                       <td>
-                        {Math.floor(rowIndex / divider)}:
-                        {(60 / divider) * (rowIndex % divider)}
+                        {dayjs()
+                          .hour(Math.floor(rowIndex / divider))
+                          .minute((60 / divider) * (rowIndex % divider))
+                          .format("HH:mm")}
                       </td>
                       {Array(7)
                         .fill(0)
                         .map((_, index) => (
-                          <td key={index}></td>
+                          <td
+                            key={index}
+                            style={
+                              index > 4 ? { backgroundColor: "lightgray" } : {}
+                            }
+                          ></td>
                         ))}
                     </tr>
                   ))}
@@ -380,7 +436,7 @@ const CopyFromDayPopover: FC<{ copy: (from: Dayjs) => void }> = ({ copy }) => {
   return (
     <OverlayTrigger
       trigger="click"
-      placement="top"
+      placement="right"
       show={isOpen}
       rootClose
       overlay={
@@ -404,9 +460,7 @@ const CopyFromDayPopover: FC<{ copy: (from: Dayjs) => void }> = ({ copy }) => {
         </Popover>
       }
     >
-      <Button variant="success" onClick={() => setIsOpen((p) => !p)}>
-        Скопировать из дня
-      </Button>
+      <div onClick={() => setIsOpen((p) => !p)}>Скопировать из дня</div>
     </OverlayTrigger>
   );
 };

@@ -54,7 +54,9 @@ const NewsPostEditor: FC<{
             />
           </div>
         </Form.Group>
-        <Button type="submit">Сохранить</Button>
+        <Stack direction="horizontal">
+          <Button type="submit">Сохранить</Button>
+        </Stack>
       </Stack>
     </Form>
   );

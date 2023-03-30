@@ -5,6 +5,7 @@ export type NewsPost = {
   title: string;
   content: string;
   date: string;
+  image: string;
 };
 
 export type GetNewsPostParams = {

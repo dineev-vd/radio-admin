@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { FC } from "react";
 import { Button, Stack } from "react-bootstrap";
 import { Route, Routes, useNavigate } from "react-router-dom";
@@ -22,10 +23,15 @@ export const NewsView: FC = () => {
         element={
           <Stack gap={2}>
             <h2>Список новостей</h2>
-            <Button onClick={() => navigate("new")}>Добавить новость</Button>
+            <Stack direction="horizontal">
+              <Button onClick={() => navigate("new")}>Добавить новость</Button>
+            </Stack>
             {data && (
               <EntriesTable
-                data={data.news}
+                data={data.news.map(({ image, date, ...rest }) => ({
+                  ...rest,
+                  date: dayjs(date).format("hh:mm YYYY-MM-DD"),
+                }))}
                 onDelete={(id) => trigger({ id })}
                 onEntryClick={(id) => navigate(id)}
               />

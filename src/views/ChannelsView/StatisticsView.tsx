@@ -13,9 +13,8 @@ import { useGetChannelListenersQuery } from "../../store/api/channels/getChannel
 
 const StatisticsView: FC<{ id: string }> = ({ id }) => {
   const [from, setFrom] = useState(
-    dayjs().subtract(7, "day").format("YYYY-MM-DDThh:mm")
+    dayjs().subtract(7, "hours").format("YYYY-MM-DDThh:mm")
   );
-  console.log(id);
 
   const [to, setTo] = useState(dayjs().format("YYYY-MM-DDThh:mm"));
   const { data } = useGetChannelListenersQuery({

@@ -22,10 +22,15 @@ export const ChannelsView: FC = () => {
           element={
             <Stack gap={2}>
               <h2>Список каналов</h2>
-              <Button onClick={() => navigate("new")}>Добавить канал</Button>
+              <Stack direction="horizontal">
+                <Button onClick={() => navigate("new")}>Добавить канал</Button>
+              </Stack>
               {data && (
                 <EntriesTable
-                  data={data.channels}
+                  data={data.channels.map(({ logo, status, ...rest }) => ({
+                    ...rest,
+                    status: status === 0 ? "Остановлен" : "Играет",
+                  }))}
                   onDelete={(id) => trigger({ id })}
                   onEntryClick={(id) => navigate(id)}
                 />

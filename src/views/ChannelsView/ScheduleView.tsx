@@ -4,19 +4,22 @@ import minMax from "dayjs/plugin/minMax";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Stack } from "react-bootstrap";
+import { Button, Form, Stack } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
 import DateRangeSelect, {
   DateRange,
 } from "../../components/DateRangeSelect/DateRangeSelect";
+import EntriesTable from "../../components/EntriesTable/EntriesTable";
 import Schedule from "../../components/Schedule/Schedule";
 import ScheduleForm from "../../components/Schedule/ScheduleForm/ScheduleForm";
 import { useAddTrackToChannelMutation } from "../../store/api/channels/addTrackToChannel";
+import { useDeleteScheduleMutation } from "../../store/api/channels/deleteSchedule";
 import {
   ScheduleTrack,
   useGetScheduleQuery,
 } from "../../store/api/channels/getSchedule";
 import { usePatchScheduleMutation } from "../../store/api/channels/patchSchedule";
+import { Track, useGetTracksQuery } from "../../store/api/tracks/getTracks";
 
 dayjs.extend(weekday);
 dayjs.extend(utc);
@@ -55,6 +58,8 @@ export type SelectedSchedule =
   | undefined;
 
 const ScheduleView: FC<{ id: string }> = ({ id }) => {
+  const [fastAdd, setFastAdd] = useState(false);
+
   const [changes, setChanges] = useState<
     Record<string, Partial<ScheduleTrack>>
   >({});
@@ -116,24 +121,31 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
     return dayjs();
   }, [data, newTracks]);
 
-  const addNewTrack = useCallback(() => {
-    const selected =
-      selectedIndex &&
-      (selectedIndex.type === "new"
-        ? newTracks[selectedIndex.id]
-        : oldTracks && oldTracks[selectedIndex.id]);
+  const addNewTrack = useCallback(
+    (addingTrack?: Track) => {
+      const selected =
+        selectedIndex &&
+        (selectedIndex.type === "new"
+          ? newTracks[selectedIndex.id]
+          : oldTracks && oldTracks[selectedIndex.id]);
 
-    const insertDate = selected ? dayjs(selected?.enddate) : lastEnd;
+      const insertDate = selected ? dayjs(selected?.enddate) : lastEnd;
 
-    const newTrack: Partial<ScheduleTrack> = {
-      startdate: insertDate.format(),
-      enddate: insertDate.add(10, "minutes").format(),
-    };
+      const newTrack: Partial<ScheduleTrack> = {
+        startdate: insertDate.format(),
+        enddate: (addingTrack
+          ? insertDate.add(+addingTrack.duration / 1000000000, "seconds")
+          : insertDate.add(10, "minutes")
+        ).format(),
+        track: addingTrack,
+      };
 
-    const uuid = uuidv4();
-    setNewTracks((prev) => ({ ...prev, [uuid]: newTrack }));
-    setSelectedIndex({ type: "new", id: uuid });
-  }, [lastEnd, newTracks, oldTracks, selectedIndex]);
+      const uuid = uuidv4();
+      setNewTracks((prev) => ({ ...prev, [uuid]: newTrack }));
+      setSelectedIndex({ type: "new", id: uuid });
+    },
+    [lastEnd, newTracks, oldTracks, selectedIndex]
+  );
 
   const pushChanges = () => {
     if (Object.keys(newTracks).length) {
@@ -279,23 +291,56 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
     setNewTracks((prev) => ({ ...prev, ...finalNewTracks }));
   };
 
+  const [_, { isSuccess: isDeleteSuccess }] = useDeleteScheduleMutation({
+    fixedCacheKey: "0",
+  });
+
+  useEffect(() => {
+    if (isDeleteSuccess) {
+      setSelectedIndex(undefined);
+    }
+  }, [isDeleteSuccess]);
+
   return (
     <Stack gap={3}>
-      <Button
-        onClick={() => {
-          addNewTrack();
-        }}
-      >
-        Добавить трек в расписание
-      </Button>
-      <DateRangeSelect onChange={setSelectedRange} />
-      {(!!Object.keys(changes).length || !!Object.keys(newTracks).length) &&
-        data && <Button onClick={pushChanges}>Сохранить изменения</Button>}
+      <Stack direction="horizontal" gap={3} className={"d-inline-flex"}>
+        <span>
+          <Button
+            onClick={() => {
+              addNewTrack();
+            }}
+          >
+            Добавить трек в расписание
+          </Button>
+        </span>
+        <span>
+          <Button
+            onClick={() => {
+              setFastAdd((p) => !p);
+            }}
+          >
+            Быстрое добавление
+          </Button>
+        </span>
+        <span>
+          <DateRangeSelect onChange={setSelectedRange} />
+        </span>
+        <span>
+          {(!!Object.keys(changes).length || !!Object.keys(newTracks).length) &&
+            data && (
+              <Button variant="success" onClick={pushChanges}>
+                Сохранить изменения
+              </Button>
+            )}
+        </span>
+      </Stack>
       <Stack
         direction="horizontal"
         className="align-items-stretch h-100"
         gap={3}
       >
+        <>{fastAdd && <FastAdd onAdd={addNewTrack} />}</>
+
         {oldTracks && (
           <Schedule
             onDayCopy={handleCopyFromDay}
@@ -303,59 +348,19 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
             selectedRange={selectedRange}
             data={{ new: newTracks, old: oldTracks }}
             onClick={setSelectedIndex}
-            onChange={
-              ({ change, id, type }) => {
-                type === "old"
-                  ? setChanges((prev) => ({
-                      ...prev,
-                      [id]: Object.assign({}, prev[id], change),
-                    }))
-                  : setNewTracks((prev) => ({
-                      ...prev,
-                      [id]: Object.assign({}, prev[id], change),
-                    }));
-              }
-
-              // trigger([
-              //   {
-              //     id: parsedData[index].id,
-              //     startdate: dayjs(start).utc().format(),
-              //     enddate: dayjs(start + duration)
-              //       .utc()
-              //       .format(),
-              //     trackid: parsedData[index].track.id.toString(),
-              //     channelid: id,
-              //   },
-              // ])
-            }
-          />
-        )}
-        {/* {selectedIndex && data && (
-          <ScheduleForm
-            {...(selectedIndex.type === "new" ? newTracks : data)[
-              selectedIndex.id
-            ]}
-            onChange={(change) => {
-              selectedIndex.type === "old"
+            onChange={({ change, id, type }) => {
+              type === "old"
                 ? setChanges((prev) => ({
                     ...prev,
-                    [selectedIndex.id]: Object.assign(
-                      {},
-                      prev[selectedIndex.id],
-                      change
-                    ),
+                    [id]: Object.assign({}, prev[id], change),
                   }))
                 : setNewTracks((prev) => ({
                     ...prev,
-                    [selectedIndex.id]: Object.assign(
-                      {},
-                      prev[selectedIndex.id],
-                      change
-                    ),
+                    [id]: Object.assign({}, prev[id], change),
                   }));
             }}
           />
-        )} */}
+        )}
 
         <>
           {oldTracks && selectedIndex && (
@@ -380,6 +385,45 @@ const ScheduleView: FC<{ id: string }> = ({ id }) => {
         </>
       </Stack>
     </Stack>
+  );
+};
+
+const FastAdd: FC<{ onAdd: (track: Track) => void }> = ({ onAdd }) => {
+  const [query, setQuery] = useState("");
+  const { data } = useGetTracksQuery({ query });
+
+  return (
+    <div style={{ width: 300, height: "100%" }}>
+      <Form
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <Form.Control
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={"Поиск трека..."}
+        ></Form.Control>
+        {data &&
+          (data.tracks.length ? (
+            <EntriesTable
+              data={data.tracks.map(({ id, title, performancer }) => ({
+                id,
+                title,
+                performancer,
+              }))}
+              onEntryClick={(curId, entry) => {
+                const curTrack = data.tracks.find(({ id }) => id === curId);
+                curTrack && onAdd(curTrack);
+              }}
+            />
+          ) : (
+            <div>Нет результатов</div>
+          ))}
+      </Form>
+    </div>
   );
 };
 

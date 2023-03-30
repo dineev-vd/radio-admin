@@ -1,4 +1,5 @@
 import { FC } from "react";
+import { Button, Form, Stack } from "react-bootstrap";
 import { useForm } from "react-hook-form";
 import { NewChannel } from "../../../store/api/channels/createChannel";
 
@@ -9,13 +10,25 @@ const ChannelEditor: FC<{
   const { register, handleSubmit } = useForm<NewChannel>({ defaultValues });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register("title")}></input>
-
-      <input {...register("description")}></input>
-
-      <button type={"submit"}>Сохранить</button>
-    </form>
+    <Form onSubmit={handleSubmit(onSubmit)}>
+      <Stack gap={2}>
+        <Form.Group>
+          <Form.Label>Название</Form.Label>
+          <Form.Control {...register("title")}></Form.Control>
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>Описание</Form.Label>
+          <Form.Control
+            {...register("description")}
+            as="textarea"
+            style={{ minHeight: 200 }}
+          ></Form.Control>
+        </Form.Group>
+        <Stack direction="horizontal">
+          <Button type={"submit"}>Сохранить</Button>
+        </Stack>
+      </Stack>
+    </Form>
   );
 };
 

@@ -22,7 +22,9 @@ const NewsPostViewContent: FC<{ id: string }> = ({ id }) => {
       {data &&
         (isEditing ? (
           <>
-            <Button onClick={() => setIsEditing(false)}>Отменить</Button>
+            <Stack direction="horizontal">
+              <Button onClick={() => setIsEditing(false)}>Отменить</Button>
+            </Stack>
             <NewsPostEditor
               onSubmit={(change) => trigger({ id, change })}
               defaultValues={data}
@@ -30,7 +32,9 @@ const NewsPostViewContent: FC<{ id: string }> = ({ id }) => {
           </>
         ) : (
           <>
-            <Button onClick={() => setIsEditing(true)}>Редактировать</Button>
+            <Stack direction="horizontal">
+              <Button onClick={() => setIsEditing(true)}>Редактировать</Button>
+            </Stack>
             <NewsPostDisplay {...data} />
           </>
         ))}

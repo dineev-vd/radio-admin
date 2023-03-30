@@ -9,6 +9,7 @@ export type ShortChannelInfo = {
   id: string;
   title: string;
   logo: string;
+  status: number;
 };
 
 const channelsEndpoint = radioApi.injectEndpoints({

@@ -24,7 +24,9 @@ export const TracksView: FC = () => {
             <Button onClick={() => navigate("new")}>Добавить трек</Button>
             {data && (
               <EntriesTable
-                data={data.tracks}
+                data={data.tracks.map(({ duration, audio, ...track }) => ({
+                  ...track,
+                }))}
                 onDelete={(id) => deleteTrigger({ id })}
                 onEntryClick={(id) => navigate(id)}
               />

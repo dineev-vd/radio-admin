@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Form } from "react-bootstrap";
+import { Button, Form, Stack } from "react-bootstrap";
 import { useForm } from "react-hook-form";
 
 type UploadFileForm = {
@@ -9,7 +9,7 @@ type UploadFileForm = {
 const TrackUpload: FC<{ onSubmit: (formData: FormData) => void }> = ({
   onSubmit: onSubmitOuter,
 }) => {
-  const { register, handleSubmit, reset } = useForm<UploadFileForm>();
+  const { register, handleSubmit, reset, watch } = useForm<UploadFileForm>();
 
   const onSubmit = (data: UploadFileForm) => {
     const formData = new FormData();
@@ -24,9 +24,13 @@ const TrackUpload: FC<{ onSubmit: (formData: FormData) => void }> = ({
         <Form.Label>
           Выберите файл и загрузите его для добавления трека в список
         </Form.Label>
-        <Form.Control type={"file"} {...register("track_file", {})} />
+        <Stack direction="horizontal" gap={2} className="col-md-5">
+          <Form.Control type={"file"} {...register("track_file", {})} />
+          {!!watch("track_file")?.length && (
+            <Button type={"submit"}>Загрузить</Button>
+          )}
+        </Stack>
       </Form.Group>
-      <button type={"submit"}>Загрузить</button>
     </Form>
   );
 };
