@@ -1,0 +1,10 @@
+services:
+  frontend:
+    build:
+      args:
+        - REACT_APP_API_ENDPOINT=http://51.250.73.253:8080
+      context: ./
+      dockerfile: "./Dockerfile"
+    restart: always
+    ports:
+      - 3005:80
